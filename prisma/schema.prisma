@@ -17,18 +17,34 @@ model User {
 }
 
 model Asset {
-  id              Int         @id @default(autoincrement())
-  inventoryNumber String      @unique
+  id              Int          @id @default(autoincrement())
+  inventoryNumber String       @unique
   type            String
   brand           String
   model           String
   entryDate       DateTime
   supplier        String
-  status          AssetStatus @default(EN_STOCK)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  status          AssetStatus  @default(EN_STOCK)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  history HistoryEvent[]
+  // relations
+  assignments     Assignment[]
+  history         HistoryEvent[]
+  incidents       Incident[]
+}
+
+model Assignment {
+  id         Int      @id @default(autoincrement())
+  assetId    Int
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  department String
+  user       Json
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([assetId])
 }
 
 model Supplier {
@@ -83,4 +99,21 @@ model HistoryEvent {
 
   @@index([assetId])
   @@index([type])
+}
+
+model Incident {
+  id          Int            @id @default(autoincrement())
+  assetId     Int
+  asset       Asset          @relation(fields: [assetId], references: [id])
+  description String
+  reportedAt  DateTime
+  department  String
+  status      IncidentStatus @default(OUVERT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // repairs     Repair[]
+
+  @@index([assetId])
+  @@index([status])
 }

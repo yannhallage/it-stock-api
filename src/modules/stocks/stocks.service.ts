@@ -2,7 +2,7 @@ import { prisma } from '../../prisma/client';
 import { logger } from '../../logger';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AssetFilterDto } from './dto/filter-assets.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, HistoryEventType } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 
 export class StocksService {
@@ -34,6 +34,34 @@ export class StocksService {
         { id: asset.id, inventoryNumber: asset.inventoryNumber },
         '[StocksService] Matériel créé avec succès',
       );
+
+      try {
+        await prisma.historyEvent.create({
+          data: {
+            assetId: asset.id,
+            type: HistoryEventType.ASSET_CREATED,
+            payload: {
+              inventoryNumber: asset.inventoryNumber,
+              type: asset.type,
+              brand: asset.brand,
+              model: asset.model,
+              supplier: asset.supplier,
+              status: asset.status,
+              entryDate: asset.entryDate.toISOString?.() ?? asset.entryDate,
+            },
+          },
+        });
+
+        logger.debug(
+          { assetId: asset.id },
+          '[StocksService] Événement historique de création de matériel enregistré',
+        );
+      } catch (historyError) {
+        logger.error(
+          { historyError, assetId: asset.id },
+          '[StocksService] Erreur lors de la création de lévénement historique de création de matériel',
+        );
+      }
 
       return asset;
     } catch (error: any) {

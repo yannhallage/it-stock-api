@@ -7,6 +7,8 @@ import { authModule } from './modules/auth/auth.module';
 import { stocksModule } from './modules/stocks/stocks.module';
 import { suppliersModule } from './modules/suppliers/suppliers.module';
 import { materialTypesModule } from './modules/material-types/material-types.module';
+import { assignmentsModule } from './modules/assignments/assignments.module';
+import { incidentsModule } from './modules/incidents/incidents.module';
 import { logger } from './logger';
 import { HttpError } from './errors/http-error';
 
@@ -46,6 +48,12 @@ app.use('/api/auth', authModule.router);
 
 // Routing du module de gestion des stocks (matériels)
 app.use('/api/assets', stocksModule.router);
+
+// Routing du module de gestion des affectations
+app.use('/api', assignmentsModule.router);
+
+// Routing du module de gestion des incidents
+app.use('/api', incidentsModule.router);
 
 // Routing du module de gestion des fournisseurs
 app.use('/api/suppliers', suppliersModule.router);
