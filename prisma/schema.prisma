@@ -116,8 +116,24 @@ model Incident {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  // repairs     Repair[]
+  repairs     Repair[]
 
   @@index([assetId])
+  @@index([status])
+}
+
+model Repair {
+  id                 Int           @id @default(autoincrement())
+  incidentId         Int
+  incident           Incident      @relation(fields: [incidentId], references: [id])
+  workshopEntryDate  DateTime
+  action             String?
+  cost               Decimal?      @db.Decimal(10, 2)
+  status             RepairStatus  @default(EN_COURS)
+  outcome            AssetStatus?  // EN_SERVICE ou HORS_SERVICE à la clôture
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([incidentId])
   @@index([status])
 }

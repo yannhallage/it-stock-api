@@ -9,6 +9,7 @@ import { suppliersModule } from './modules/suppliers/suppliers.module';
 import { materialTypesModule } from './modules/material-types/material-types.module';
 import { assignmentsModule } from './modules/assignments/assignments.module';
 import { incidentsModule } from './modules/incidents/incidents.module';
+import { workshopModule } from './modules/workshop/workshop.module';
 import { logger } from './logger';
 import { HttpError } from './errors/http-error';
 
@@ -54,6 +55,9 @@ app.use('/api', assignmentsModule.router);
 
 // Routing du module de gestion des incidents
 app.use('/api', incidentsModule.router);
+
+// Routing du module atelier (workshop / réparations)
+app.use('/api', workshopModule.router);
 
 // Routing du module de gestion des fournisseurs
 app.use('/api/suppliers', suppliersModule.router);
