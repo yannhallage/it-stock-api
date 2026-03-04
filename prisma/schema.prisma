@@ -48,16 +48,20 @@ model Assignment {
 }
 
 model Supplier {
-  id      Int     @id @default(autoincrement())
-  name    String
-  contact String?
-  address String?
+  id         Int      @id @default(autoincrement())
+  name       String
+  contact    String?
+  address    String?
+  createdAt  DateTime @default(now())
+  deletedAt  DateTime?
 }
 
 model MaterialType {
   id          Int     @id @default(autoincrement())
   name        String
   description String?
+  createdAt  DateTime @default(now())
+  deletedAt  DateTime?
 }
 
 enum AssetStatus {
