@@ -16,3 +16,71 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Asset {
+  id              Int         @id @default(autoincrement())
+  inventoryNumber String      @unique
+  type            String
+  brand           String
+  model           String
+  entryDate       DateTime
+  supplier        String
+  status          AssetStatus @default(EN_STOCK)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  history HistoryEvent[]
+}
+
+model Supplier {
+  id      Int     @id @default(autoincrement())
+  name    String
+  contact String?
+  address String?
+}
+
+model MaterialType {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+}
+
+enum AssetStatus {
+  EN_STOCK
+  AFFECTE
+  EN_PANNE
+  EN_REPARATION
+  EN_SERVICE
+  HORS_SERVICE
+}
+
+enum IncidentStatus {
+  OUVERT
+  CLOS
+}
+
+enum RepairStatus {
+  EN_COURS
+  TERMINE
+}
+
+enum HistoryEventType {
+  ASSET_CREATED
+  STATUS_CHANGED
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_ENDED
+  INCIDENT_REPORTED
+  REPAIR_STARTED
+  REPAIR_FINISHED
+}
+
+model HistoryEvent {
+  id        Int              @id @default(autoincrement())
+  assetId   Int
+  asset     Asset            @relation(fields: [assetId], references: [id])
+  type      HistoryEventType
+  payload   Json
+  createdAt DateTime         @default(now())
+
+  @@index([assetId])
+  @@index([type])
+}
