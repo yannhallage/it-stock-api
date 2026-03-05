@@ -13,6 +13,18 @@ const options: swaggerJsdoc.Options = {
         url: 'http://localhost:3000',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description:
+            'Token obtenu via POST /api/auth/login. Coller uniquement la valeur de "accessToken" (sans "Bearer ").',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
   apis: ['./src/modules/**/*.controller.ts', './dist/modules/**/*.controller.js'],
 };

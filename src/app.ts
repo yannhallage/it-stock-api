@@ -56,8 +56,16 @@ app.use('/api', authenticate, workshopModule.router);
 app.use('/api/suppliers', authenticate, suppliersModule.router);
 app.use('/api/material-types', authenticate, materialTypesModule.router);
 
-// Documentation Swagger disponible à /docs
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Documentation Swagger disponible à /docs (token stocké après Authorize)
+app.use(
+  '/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  })
+);
 
 // Middleware global de gestion des erreurs
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

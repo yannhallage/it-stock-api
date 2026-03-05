@@ -20,6 +20,7 @@ export class AuthController {
    *   post:
    *     summary: Création d'un nouvel utilisateur
    *     tags: [Auth]
+   *     security: []
    *     requestBody:
    *       required: true
    *       content:
@@ -65,6 +66,7 @@ export class AuthController {
    *   post:
    *     summary: Connexion d'un utilisateur
    *     tags: [Auth]
+   *     security: []
    *     requestBody:
    *       required: true
    *       content:
@@ -81,7 +83,21 @@ export class AuthController {
    *                 type: string
    *     responses:
    *       200:
-   *         description: Authentification réussie
+   *         description: Authentification réussie — utilisez "accessToken" dans Authorize (bouton cadenas)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 accessToken:
+   *                   type: string
+   *                   description: JWT à coller dans Swagger (Authorize)
+   *                 tokenType:
+   *                   type: string
+   *                   example: Bearer
+   *                 expiresIn:
+   *                   type: integer
+   *                   description: Durée de validité en secondes
    *       400:
    *         description: Données invalides
    *       401:
