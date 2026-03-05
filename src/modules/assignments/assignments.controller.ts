@@ -57,7 +57,24 @@ export class AssignmentsController {
 
   /**
    * @swagger
-   * /api/assets/{id}/assignments:
+   * /api/assignments/all:
+   *   get:
+   *     summary: Liste toutes les affectations (sans filtre)
+   *     tags: [Assignments]
+   *     responses:
+   *       200:
+   *         description: Liste de toutes les affectations
+   */
+  listAll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const assignments = await assignmentsService.listAssignments({});
+      return res.status(200).json(assignments);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
    *   post:
    *     summary: Créer une nouvelle affectation pour un matériel
    *     tags: [Assignments]

@@ -15,6 +15,9 @@ export class AssignmentsModule {
     // Récupération des affectations (optionnellement filtrées)
     this.router.get('/assignments', this.controller.list);
 
+    // Récupération de toutes les affectations (sans filtre)
+    this.router.get('/assignments/all', this.controller.listAll);
+
     // Création d'une affectation pour un matériel
     this.router.post('/assets/:id/assignments', this.controller.createForAsset);
 

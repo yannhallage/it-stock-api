@@ -106,7 +106,7 @@ export class WorkshopService {
   async startRepair(data: StartRepairDto) {
     logger.info(
       { incidentId: data.incidentId, workshopEntryDate: data.workshopEntryDate },
-      '[WorkshopService] Démarrage d'une réparation demandé',
+      '[WorkshopService] Démarrage d\'une réparation demandé',
     );
 
     try {
@@ -127,7 +127,7 @@ export class WorkshopService {
         if (incident.status !== IncidentStatus.OUVERT) {
           logger.warn(
             { incidentId: data.incidentId, status: incident.status },
-            '[WorkshopService] L'incident n'est pas ouvert',
+            '[WorkshopService] L\'incident n\'est pas ouvert',
           );
           throw new HttpError(
             400,
@@ -268,7 +268,7 @@ export class WorkshopService {
   async closeRepair(repairId: number, data: CloseRepairDto) {
     logger.info(
       { repairId, outcome: data.outcome },
-      '[WorkshopService] Clôture d'une réparation demandée',
+      '[WorkshopService] Clôture d\'une réparation demandée',
     );
 
     if (!Number.isInteger(repairId) || repairId < 1) {

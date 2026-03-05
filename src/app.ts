@@ -4,6 +4,7 @@ import { env } from './config/env';
 import { swaggerSpec } from './config/swagger';
 import swaggerUi from 'swagger-ui-express';
 import { authModule } from './modules/auth/auth.module';
+import { authenticate } from './modules/auth/auth.middleware';
 import { stocksModule } from './modules/stocks/stocks.module';
 import { suppliersModule } from './modules/suppliers/suppliers.module';
 import { materialTypesModule } from './modules/material-types/material-types.module';
@@ -44,26 +45,16 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routing du module d'authentification
+// Routing du module d'authentification (public : login, register)
 app.use('/api/auth', authModule.router);
 
-// Routing du module de gestion des stocks (matériels)
-app.use('/api/assets', stocksModule.router);
-
-// Routing du module de gestion des affectations
-app.use('/api', assignmentsModule.router);
-
-// Routing du module de gestion des incidents
-app.use('/api', incidentsModule.router);
-
-// Routing du module atelier (workshop / réparations)
-app.use('/api', workshopModule.router);
-
-// Routing du module de gestion des fournisseurs
-app.use('/api/suppliers', suppliersModule.router);
-
-// Routing du module de gestion des types de matériel
-app.use('/api/material-types', materialTypesModule.router);
+// Routes protégées par authentification JWT
+app.use('/api/assets', authenticate, stocksModule.router);
+app.use('/api', authenticate, assignmentsModule.router);
+app.use('/api', authenticate, incidentsModule.router);
+app.use('/api', authenticate, workshopModule.router);
+app.use('/api/suppliers', authenticate, suppliersModule.router);
+app.use('/api/material-types', authenticate, materialTypesModule.router);
 
 // Documentation Swagger disponible à /docs
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
