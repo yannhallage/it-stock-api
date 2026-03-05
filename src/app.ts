@@ -26,7 +26,7 @@ app.use(
         env.corsOrigin,
         'http://localhost:5173',
         'http://127.0.0.1:5173',
-        'https://assnat-stock.vercel.app/',
+        'https://assnat-stock.vercel.app',
       ];
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -37,7 +37,7 @@ app.use(
     credentials: true,
   })
 );
-
+app.options('*', cors());
 // Middleware pour parser le JSON
 app.use(express.json());
 
