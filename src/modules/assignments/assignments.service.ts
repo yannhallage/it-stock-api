@@ -41,7 +41,7 @@ export class AssignmentsService {
 
   async createAssignment(assetId: number, data: CreateAssignmentDto) {
     logger.info(
-      { assetId, department: data.department },
+      // { assetId, department: data.department },
       '[AssignmentsService] Création dune affectation demandée',
     );
 
@@ -62,7 +62,7 @@ export class AssignmentsService {
           asset.status === AssetStatus.HORS_SERVICE
         ) {
           logger.warn(
-            { assetId, status: asset.status },
+            // { assetId, status: asset.status },
             "[AssignmentsService] Matériel non assignable en raison de son statut",
           );
           throw new HttpError(
@@ -72,16 +72,25 @@ export class AssignmentsService {
           );
         }
 
-        // Clôturer l'affectation active précédente (s'il y en a une)
-        await tx.assignment.updateMany({
+        // Vérifier que le matériel n'est pas déjà affecté
+        const activeAssignment = await tx.assignment.findFirst({
           where: {
             assetId,
             endDate: null,
           },
-          data: {
-            endDate: new Date(),
-          },
         });
+
+        if (activeAssignment) {
+          logger.warn(
+            { assetId, assignmentId: activeAssignment.id },
+            '[AssignmentsService] Matériel déjà affecté',
+          );
+          throw new HttpError(
+            400,
+            'Ce matériel est déjà affecté. Veuillez clôturer l\'affectation en cours avant d\'en créer une nouvelle.',
+            // 'ASSET_ALREADY_ASSIGNED',
+          );
+        }
 
         const assignment = await tx.assignment.create({
           data: {
@@ -142,7 +151,7 @@ export class AssignmentsService {
       const { assignment, historyEvents } = result;
 
       logger.info(
-        { assignmentId: assignment.id, assetId },
+        // { assignmentId: assignment.id, assetId },
         '[AssignmentsService] Affectation créée avec succès',
       );
 
@@ -150,7 +159,7 @@ export class AssignmentsService {
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
         logger.warn(
-          { assetId, error },
+          // { assetId, error },
           '[AssignmentsService] Données invalides lors de la création de laffectation',
         );
 
@@ -166,7 +175,7 @@ export class AssignmentsService {
       }
 
       logger.error(
-        { error, assetId },
+        // { error, assetId },
         '[AssignmentsService] Erreur inattendue lors de la création de laffectation',
       );
 

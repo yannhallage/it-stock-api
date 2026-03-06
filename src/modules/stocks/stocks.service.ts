@@ -160,18 +160,43 @@ export class StocksService {
   }
 
   async getAssetById(id: number) {
-    logger.debug({ id }, '[StocksService] Récupération du matériel');
+    logger.debug('[StocksService] Récupération du matériel');
 
     try {
       const asset = await prisma.asset.findUnique({
         where: { id },
+        include: {
+          assignments: {
+            orderBy: { startDate: 'desc' },
+          },
+          history: {
+            orderBy: { createdAt: 'desc' },
+          },
+          incidents: {
+            include: { repairs: true },
+            orderBy: { reportedAt: 'desc' },
+          },
+        },
       });
 
       if (!asset) {
-        logger.warn({ id }, '[StocksService] Matériel non trouvé');
+        logger.warn('[StocksService] Matériel non trouvé');
+        return null;
       }
 
-      return asset;
+      const now = new Date();
+      const currentAssignment = asset.assignments.find(
+        (a) => !a.endDate || a.endDate >= now,
+      ) ?? null;
+
+      const { assignments: _a, incidents: _i, ...assetData } = asset;
+      return {
+        ...assetData,
+        currentAssignment,
+        history: asset.history,
+        incidentsWithRepairs: asset.incidents,
+        currentStatus: asset.status,
+      };
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
         logger.warn(

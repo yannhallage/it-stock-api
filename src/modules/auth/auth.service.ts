@@ -41,24 +41,24 @@ export class AuthService {
   }
 
   async login(data: LoginDto) {
-    logger.info({ email: data.email }, '[AuthService] Tentative connexion');
+    logger.info(`[AuthService] Tentative connexion pour l'email`);
     const user = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (!user) {
-      logger.warn({ email: data.email }, '[AuthService] Connexion échouée: utilisateur non trouvé');
+      logger.warn('[AuthService] Connexion échouée: utilisateur non trouvé');
       throw new Error('Identifiants invalides.');
     }
 
     const isValid = await bcrypt.compare(data.password, user.password);
 
     if (!isValid) {
-      logger.warn({ email: data.email }, '[AuthService] Connexion échouée: mot de passe incorrect');
+      logger.warn('[AuthService] Connexion échouée: mot de passe incorrect');
       throw new Error('Identifiants invalides.');
     }
 
-    logger.info({ id: user.id, email: user.email }, '[AuthService] Connexion réussie');
+    logger.info('[AuthService] Connexion réussie');
 
     const token = jwt.sign(
       {
@@ -71,7 +71,7 @@ export class AuthService {
       },
     );
 
-    logger.debug({ id: user.id, email: user.email }, '[AuthService] JWT généré (expire dans 1h)');
+    logger.debug('[AuthService] JWT généré (expire dans 1h)');
     return {
       accessToken: token,
       tokenType: 'Bearer',
@@ -80,7 +80,7 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    logger.debug({ userId }, '[AuthService] Récupération profil utilisateur');
+    logger.debug('[AuthService] Récupération profil utilisateur');
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -93,7 +93,7 @@ export class AuthService {
     });
 
     if (!user) {
-      logger.warn({ userId }, "[AuthService] Utilisateur non trouvé");
+      logger.warn("[AuthService] Utilisateur non trouvé");
       throw new Error("L'utilisateur n'existe pas.");
     }
 
