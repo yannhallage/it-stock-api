@@ -28,7 +28,7 @@ app.use(
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'https://assnat-stock.vercel.app',
-        "http://localhost:3000/docs/"
+        "http://localhost:3000"
       ];
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -43,6 +43,16 @@ app.options('*', cors());
 // Middleware pour parser le JSON
 app.use(express.json());
 
+// Documentation Swagger disponible à /docs (token stocké après Authorize)
+app.use(
+  '/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  })
+);
 // Endpoint de vérification de santé
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -60,16 +70,7 @@ app.use('/api/dashboard', authenticate, dashboardModule.router);
 app.use('/api/suppliers', authenticate, suppliersModule.router);
 app.use('/api/material-types', authenticate, materialTypesModule.router);
 
-// Documentation Swagger disponible à /docs (token stocké après Authorize)
-app.use(
-  '/docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  })
-);
+
 
 // Middleware global de gestion des erreurs
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
