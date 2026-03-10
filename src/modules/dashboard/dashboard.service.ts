@@ -35,18 +35,24 @@ export interface SyntheseEtat {
   count: number;
 }
 
+export interface MaterielParType {
+  type: string;
+  count: number;
+}
+
 export interface DashboardData {
   simple_data: SimpleData;
   repartition_par_etat: RepartitionEtat[];
   top_directions_pannes: TopDirectionPannes[];
   synthese_par_etat: SyntheseEtat[];
+  materiels_par_type: MaterielParType[];
 }
 
 export class DashboardService {
   async getDashboard(): Promise<DashboardData> {
     logger.debug('[DashboardService] Calcul des indicateurs du tableau de bord');
 
-    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes] =
+    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes, materielsParType] =
       await Promise.all([
         prisma.asset.count(),
         prisma.asset.groupBy({
@@ -56,6 +62,10 @@ export class DashboardService {
         prisma.repair.count({ where: { status: 'EN_COURS' } }),
         prisma.incident.groupBy({
           by: ['department'],
+          _count: { id: true },
+        }),
+        prisma.asset.groupBy({
+          by: ['type'],
           _count: { id: true },
         }),
       ]);
@@ -102,11 +112,17 @@ export class DashboardService {
       count: statusCounts[etat] ?? 0,
     }));
 
+    const materiels_par_type: MaterielParType[] = materielsParType.map((r) => ({
+      type: r.type,
+      count: r._count.id,
+    }));
+
     const data: DashboardData = {
       simple_data,
       repartition_par_etat,
       top_directions_pannes,
       synthese_par_etat,
+      materiels_par_type,
     };
 
     logger.debug(
