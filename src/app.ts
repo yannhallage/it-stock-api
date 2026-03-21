@@ -28,6 +28,7 @@ app.use(
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'https://assnat-stock.vercel.app',
+        'https://assnat-control.vercel.app',
         "http://localhost:3000"
       ];
       if (allowedOrigins.includes(origin)) {
