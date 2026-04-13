@@ -31,6 +31,7 @@ app.use(
         'https://assnat-control.vercel.app',
         'https://api-control-chi.vercel.app',
         "http://localhost:3000",
+        "http://81.0.220.161:8080",
         "http://localhost:8080"
       ];
       if (allowedOrigins.includes(origin)) {
