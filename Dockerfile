@@ -51,6 +51,9 @@
     FROM node:20-slim AS builder
 
     WORKDIR /app
+
+    RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+        && rm -rf /var/lib/apt/lists/*
     
     # Install deps + generate Prisma + build (regroupé pour Hadolint)
     COPY package.json package-lock.json ./
@@ -70,6 +73,9 @@
     
     WORKDIR /app
     ENV NODE_ENV=production
+
+    RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+        && rm -rf /var/lib/apt/lists/*
     
     # Install only prod deps
     COPY package.json package-lock.json ./
