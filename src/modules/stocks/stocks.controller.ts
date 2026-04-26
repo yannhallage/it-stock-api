@@ -46,6 +46,14 @@ export class StocksController {
    *                 format: date-time
    *               supplier:
    *                 type: string
+   *               warrantyStartDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Début de garantie (optionnel)
+   *               warrantyEndDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Fin de garantie (optionnel)
    *               status:
    *                 type: string
    *     responses:

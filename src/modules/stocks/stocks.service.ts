@@ -26,6 +26,8 @@ export class StocksService {
           model: data.model,
           entryDate: data.entryDate,
           supplier: data.supplier,
+          warrantyStartDate: data.warrantyStartDate,
+          warrantyEndDate: data.warrantyEndDate,
           status: (data.status as any) ?? undefined,
         },
       });
@@ -48,6 +50,8 @@ export class StocksService {
               supplier: asset.supplier,
               status: asset.status,
               entryDate: asset.entryDate.toISOString?.() ?? asset.entryDate,
+              warrantyStartDate: asset.warrantyStartDate?.toISOString?.() ?? asset.warrantyStartDate,
+              warrantyEndDate: asset.warrantyEndDate?.toISOString?.() ?? asset.warrantyEndDate,
             },
           },
         });

@@ -5,6 +5,8 @@ export interface CreateAssetDto {
   model: string;
   entryDate: Date;
   supplier: string;
+  warrantyStartDate?: Date;
+  warrantyEndDate?: Date;
   status?: string;
 }
 
@@ -39,12 +41,48 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
     errors.push("Le statut doit être une chaîne de caractères s'il est fourni.");
   }
 
+  let parsedWarrantyStart: Date | undefined;
+  if (body.warrantyStartDate != null && body.warrantyStartDate !== '') {
+    if (typeof body.warrantyStartDate !== 'string') {
+      errors.push("La date de début de garantie doit être une chaîne ISO (YYYY-MM-DD) si elle est fournie.");
+    } else {
+      const d = new Date(body.warrantyStartDate);
+      if (Number.isNaN(d.getTime())) {
+        errors.push('La date de début de garantie doit être une date valide.');
+      } else {
+        parsedWarrantyStart = d;
+      }
+    }
+  }
+
+  let parsedWarrantyEnd: Date | undefined;
+  if (body.warrantyEndDate != null && body.warrantyEndDate !== '') {
+    if (typeof body.warrantyEndDate !== 'string') {
+      errors.push("La date de fin de garantie doit être une chaîne ISO (YYYY-MM-DD) si elle est fournie.");
+    } else {
+      const d = new Date(body.warrantyEndDate);
+      if (Number.isNaN(d.getTime())) {
+        errors.push('La date de fin de garantie doit être une date valide.');
+      } else {
+        parsedWarrantyEnd = d;
+      }
+    }
+  }
+
   let parsedDate: Date | null = null;
   if (typeof body.entryDate === 'string') {
     parsedDate = new Date(body.entryDate);
     if (Number.isNaN(parsedDate.getTime())) {
       errors.push("La date d'entrée doit être une date valide.");
     }
+  }
+
+  if (
+    parsedWarrantyStart &&
+    parsedWarrantyEnd &&
+    parsedWarrantyEnd.getTime() < parsedWarrantyStart.getTime()
+  ) {
+    errors.push('La date de fin de garantie ne peut pas être antérieure à la date de début.');
   }
 
   if (errors.length > 0) {
@@ -61,6 +99,8 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
     model: body.model.trim(),
     entryDate: parsedDate!,
     supplier: body.supplier.trim(),
+    warrantyStartDate: parsedWarrantyStart,
+    warrantyEndDate: parsedWarrantyEnd,
     status:
       typeof body.status === 'string' && body.status.trim().length > 0 ? body.status.trim() : undefined,
   };

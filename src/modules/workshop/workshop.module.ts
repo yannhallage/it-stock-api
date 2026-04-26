@@ -15,6 +15,7 @@ export class WorkshopModule {
     this.router.get('/atelier/repairs', this.controller.listRepairs);
     this.router.post('/atelier/repairs/start', this.controller.startRepair);
     this.router.get('/atelier/repairs/:id', this.controller.getRepairById);
+    this.router.get('/atelier/repairs/:id/print', this.controller.printRepairSheet);
     this.router.patch('/atelier/repairs/:id/close', this.controller.closeRepair);
   }
 }
