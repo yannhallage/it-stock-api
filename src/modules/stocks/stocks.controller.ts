@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { StocksService } from './stocks.service';
 import { validateCreateAssetDto } from './dto/create-asset.dto';
+import { validateUpdateAssetDto } from './dto/update-asset.dto';
 import { validateAssetFilterDto } from './dto/filter-assets.dto';
 
 const stocksService = new StocksService();
@@ -152,6 +153,89 @@ export class StocksController {
 
       const asset = await stocksService.getAssetById(id);
 
+      if (!asset) {
+        return res.status(404).json({ message: 'Matériel non trouvé.' });
+      }
+
+      return res.status(200).json(asset);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/assets/{id}:
+   *   patch:
+   *     summary: Met à jour un matériel (champs partiels)
+   *     tags: [Assets]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               inventoryNumber:
+   *                 type: string
+   *               serial_number:
+   *                 type: string
+   *                 nullable: true
+   *               type:
+   *                 type: string
+   *               brand:
+   *                 type: string
+   *               model:
+   *                 type: string
+   *               entryDate:
+   *                 type: string
+   *                 format: date-time
+   *               supplier:
+   *                 type: string
+   *               warrantyStartDate:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               warrantyEndDate:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               status:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Matériel mis à jour
+   *       400:
+   *         description: Données invalides
+   *       404:
+   *         description: Matériel non trouvé
+   *       409:
+   *         description: Numéro d'inventaire déjà utilisé
+   */
+  update = async (req: Request, res: Response, next: NextFunction) => {
+
+    console.log(req.body);
+    try {
+      const id = parseInt(req.params.id, 10);
+
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "L'identifiant doit être un entier valide." });
+      }
+
+      const { value, errors } = validateUpdateAssetDto(req.body);
+      console.log('valider par zod')
+      if (errors) {
+        return res.status(400).json({ errors });
+      }
+
+      const asset = await stocksService.updateAsset(id, value!);
+      console.log('asset', asset);
       if (!asset) {
         return res.status(404).json({ message: 'Matériel non trouvé.' });
       }

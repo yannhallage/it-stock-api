@@ -15,6 +15,7 @@ export class StocksModule {
     this.router.post('/', this.controller.create);
     this.router.get('/', this.controller.list);
     this.router.get('/:id', this.controller.getById);
+    this.router.patch('/:id', this.controller.update);
     this.router.delete('/:id', this.controller.delete);
   }
 }

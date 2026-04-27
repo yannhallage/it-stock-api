@@ -1,5 +1,6 @@
 export interface CreateAssetDto {
   inventoryNumber?: string;
+  serial_number?: string | null;
   type: string;
   brand: string;
   model: string;
@@ -7,6 +8,7 @@ export interface CreateAssetDto {
   supplier: string;
   warrantyStartDate?: Date;
   warrantyEndDate?: Date;
+  warrantyMonths?: number;
   status?: string;
 }
 
@@ -15,6 +17,20 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
 
   if (body.inventoryNumber != null && typeof body.inventoryNumber !== 'string') {
     errors.push("Le numéro d'inventaire doit être une chaîne de caractères s'il est fourni.");
+  }
+
+  const serialInput = body.serial_number !== undefined ? body.serial_number : body.serialNumber;
+  let parsedSerial: string | null | undefined;
+  if (serialInput !== undefined) {
+    if (serialInput === null) {
+      parsedSerial = null;
+    } else if (typeof serialInput !== 'string') {
+      errors.push('Le numéro de série doit être une chaîne ou null.');
+    } else if (serialInput.trim().length === 0) {
+      parsedSerial = null;
+    } else {
+      parsedSerial = serialInput.trim();
+    }
   }
 
   if (typeof body.type !== 'string' || body.type.trim().length === 0) {
@@ -85,6 +101,15 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
     errors.push('La date de fin de garantie ne peut pas être antérieure à la date de début.');
   }
 
+  let parsedWarrantyMonths: number | undefined;
+  if (body.warrantyMonths !== undefined) {
+    if (!Number.isInteger(body.warrantyMonths) || body.warrantyMonths < 0) {
+      errors.push('La durée de garantie (warrantyMonths) doit être un entier positif ou nul.');
+    } else {
+      parsedWarrantyMonths = body.warrantyMonths;
+    }
+  }
+
   if (errors.length > 0) {
     return { errors };
   }
@@ -94,6 +119,7 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
       typeof body.inventoryNumber === 'string' && body.inventoryNumber.trim().length > 0
         ? body.inventoryNumber.trim()
         : undefined,
+    serial_number: parsedSerial,
     type: body.type.trim(),
     brand: body.brand.trim(),
     model: body.model.trim(),
@@ -101,6 +127,7 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
     supplier: body.supplier.trim(),
     warrantyStartDate: parsedWarrantyStart,
     warrantyEndDate: parsedWarrantyEnd,
+    warrantyMonths: parsedWarrantyMonths,
     status:
       typeof body.status === 'string' && body.status.trim().length > 0 ? body.status.trim() : undefined,
   };
