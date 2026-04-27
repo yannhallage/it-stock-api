@@ -1,10 +1,14 @@
 export interface CreateAssetDto {
   inventoryNumber?: string;
+  serial_number?: string | null;
   type: string;
   brand: string;
   model: string;
   entryDate: Date;
   supplier: string;
+  warrantyStartDate?: Date;
+  warrantyEndDate?: Date;
+  warrantyMonths?: number;
   status?: string;
 }
 
@@ -13,6 +17,20 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
 
   if (body.inventoryNumber != null && typeof body.inventoryNumber !== 'string') {
     errors.push("Le numéro d'inventaire doit être une chaîne de caractères s'il est fourni.");
+  }
+
+  const serialInput = body.serial_number !== undefined ? body.serial_number : body.serialNumber;
+  let parsedSerial: string | null | undefined;
+  if (serialInput !== undefined) {
+    if (serialInput === null) {
+      parsedSerial = null;
+    } else if (typeof serialInput !== 'string') {
+      errors.push('Le numéro de série doit être une chaîne ou null.');
+    } else if (serialInput.trim().length === 0) {
+      parsedSerial = null;
+    } else {
+      parsedSerial = serialInput.trim();
+    }
   }
 
   if (typeof body.type !== 'string' || body.type.trim().length === 0) {
@@ -39,11 +57,56 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
     errors.push("Le statut doit être une chaîne de caractères s'il est fourni.");
   }
 
+  let parsedWarrantyStart: Date | undefined;
+  if (body.warrantyStartDate != null && body.warrantyStartDate !== '') {
+    if (typeof body.warrantyStartDate !== 'string') {
+      errors.push("La date de début de garantie doit être une chaîne ISO (YYYY-MM-DD) si elle est fournie.");
+    } else {
+      const d = new Date(body.warrantyStartDate);
+      if (Number.isNaN(d.getTime())) {
+        errors.push('La date de début de garantie doit être une date valide.');
+      } else {
+        parsedWarrantyStart = d;
+      }
+    }
+  }
+
+  let parsedWarrantyEnd: Date | undefined;
+  if (body.warrantyEndDate != null && body.warrantyEndDate !== '') {
+    if (typeof body.warrantyEndDate !== 'string') {
+      errors.push("La date de fin de garantie doit être une chaîne ISO (YYYY-MM-DD) si elle est fournie.");
+    } else {
+      const d = new Date(body.warrantyEndDate);
+      if (Number.isNaN(d.getTime())) {
+        errors.push('La date de fin de garantie doit être une date valide.');
+      } else {
+        parsedWarrantyEnd = d;
+      }
+    }
+  }
+
   let parsedDate: Date | null = null;
   if (typeof body.entryDate === 'string') {
     parsedDate = new Date(body.entryDate);
     if (Number.isNaN(parsedDate.getTime())) {
       errors.push("La date d'entrée doit être une date valide.");
+    }
+  }
+
+  if (
+    parsedWarrantyStart &&
+    parsedWarrantyEnd &&
+    parsedWarrantyEnd.getTime() < parsedWarrantyStart.getTime()
+  ) {
+    errors.push('La date de fin de garantie ne peut pas être antérieure à la date de début.');
+  }
+
+  let parsedWarrantyMonths: number | undefined;
+  if (body.warrantyMonths !== undefined) {
+    if (!Number.isInteger(body.warrantyMonths) || body.warrantyMonths < 0) {
+      errors.push('La durée de garantie (warrantyMonths) doit être un entier positif ou nul.');
+    } else {
+      parsedWarrantyMonths = body.warrantyMonths;
     }
   }
 
@@ -56,11 +119,15 @@ export const validateCreateAssetDto = (body: any): { value?: CreateAssetDto; err
       typeof body.inventoryNumber === 'string' && body.inventoryNumber.trim().length > 0
         ? body.inventoryNumber.trim()
         : undefined,
+    serial_number: parsedSerial,
     type: body.type.trim(),
     brand: body.brand.trim(),
     model: body.model.trim(),
     entryDate: parsedDate!,
     supplier: body.supplier.trim(),
+    warrantyStartDate: parsedWarrantyStart,
+    warrantyEndDate: parsedWarrantyEnd,
+    warrantyMonths: parsedWarrantyMonths,
     status:
       typeof body.status === 'string' && body.status.trim().length > 0 ? body.status.trim() : undefined,
   };

@@ -19,12 +19,15 @@ model User {
 model Asset {
   id              Int          @id @default(autoincrement())
   inventoryNumber String       @unique
+  serial_number   String?
   type            String
   brand           String
   model           String
-  entryDate       DateTime
-  supplier        String
-  status          AssetStatus  @default(EN_STOCK)
+  entryDate         DateTime
+  supplier          String
+  warrantyStartDate DateTime?
+  warrantyEndDate   DateTime?
+  status            AssetStatus  @default(EN_STOCK)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -126,6 +129,7 @@ model Repair {
   id                 Int           @id @default(autoincrement())
   incidentId         Int
   incident           Incident      @relation(fields: [incidentId], references: [id])
+  technicianName     String?
   workshopEntryDate  DateTime
   action             String?
   cost               Decimal?      @db.Decimal(10, 2)

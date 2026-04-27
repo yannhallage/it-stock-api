@@ -1,11 +1,18 @@
 import { prisma } from '../../prisma/client';
 import { logger } from '../../logger';
 import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
 import { AssetFilterDto } from './dto/filter-assets.dto';
 import { Prisma, HistoryEventType } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 
 export class StocksService {
+  private addMonths(date: Date, months: number): Date {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result;
+  }
+
   async createAsset(data: CreateAssetDto) {
     const inventoryNumber =
       data.inventoryNumber && data.inventoryNumber.trim().length > 0
@@ -18,14 +25,29 @@ export class StocksService {
     );
 
     try {
+      const hasWarrantyInput =
+        data.warrantyStartDate !== undefined ||
+        data.warrantyEndDate !== undefined ||
+        data.warrantyMonths !== undefined;
+      const warrantyStartDate = hasWarrantyInput ? data.warrantyStartDate ?? data.entryDate : undefined;
+      const warrantyEndDate = hasWarrantyInput
+        ? data.warrantyEndDate ??
+          (data.warrantyMonths !== undefined
+            ? this.addMonths(warrantyStartDate!, data.warrantyMonths)
+            : undefined)
+        : undefined;
+
       const asset = await prisma.asset.create({
         data: {
           inventoryNumber,
+          serial_number: data.serial_number,
           type: data.type,
           brand: data.brand,
           model: data.model,
           entryDate: data.entryDate,
           supplier: data.supplier,
+          warrantyStartDate,
+          warrantyEndDate,
           status: (data.status as any) ?? undefined,
         },
       });
@@ -48,6 +70,8 @@ export class StocksService {
               supplier: asset.supplier,
               status: asset.status,
               entryDate: asset.entryDate.toISOString?.() ?? asset.entryDate,
+              warrantyStartDate: asset.warrantyStartDate?.toISOString?.() ?? asset.warrantyStartDate,
+              warrantyEndDate: asset.warrantyEndDate?.toISOString?.() ?? asset.warrantyEndDate,
             },
           },
         });
@@ -100,6 +124,59 @@ export class StocksService {
 
       throw error;
     }
+  }
+
+  async updateAsset(id: number, data: UpdateAssetDto) {
+    logger.info({ id }, '[StocksService] Mise à jour de matériel demandée');
+
+    const existing = await prisma.asset.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      logger.warn({ id }, '[StocksService] Mise à jour impossible: matériel non trouvé');
+      return null;
+    }
+
+    const mergedStart =
+      data.warrantyStartDate !== undefined ? data.warrantyStartDate : existing.warrantyStartDate;
+    const startForMonths =
+      data.warrantyStartDate !== undefined
+        ? data.warrantyStartDate
+        : existing.warrantyStartDate ?? existing.entryDate;
+    const computedEndFromMonths =
+      data.warrantyMonths !== undefined && startForMonths
+        ? this.addMonths(startForMonths, data.warrantyMonths)
+        : undefined;
+    const mergedEnd =
+      data.warrantyEndDate !== undefined
+        ? data.warrantyEndDate
+        : computedEndFromMonths ?? existing.warrantyEndDate;
+
+    if (mergedStart && mergedEnd && mergedEnd.getTime() < mergedStart.getTime()) {
+      throw new HttpError(
+        400,
+        'La date de fin de garantie ne peut pas être antérieure à la date de début.',
+        'ASSET_WARRANTY_RANGE_INVALID',
+      );
+    }
+
+    const { warrantyMonths, ...dataWithoutWarrantyMonths } = data;
+
+    const asset = await prisma.asset.update({
+      where: { id },
+      data: {
+        ...dataWithoutWarrantyMonths,
+        warrantyStartDate: data.warrantyStartDate !== undefined ? data.warrantyStartDate : undefined,
+        warrantyEndDate:
+          data.warrantyEndDate !== undefined ? data.warrantyEndDate : computedEndFromMonths,
+        status: data.status as any,
+      },
+    });
+
+    logger.info({ id }, '[StocksService] Matériel mis à jour avec succès');
+
+    return asset;
   }
 
   async getAssets(filters: AssetFilterDto) {

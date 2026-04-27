@@ -101,11 +101,71 @@ export class WorkshopService {
   }
 
   /**
+   * Récupère les données nécessaires à l'impression de la fiche d'intervention atelier.
+   */
+  async getRepairPrintPayload(id: number) {
+    if (!Number.isInteger(id) || id < 1) {
+      throw new HttpError(
+        400,
+        "L'identifiant de la réparation doit être un entier strictement positif.",
+        'INVALID_REPAIR_ID',
+      );
+    }
+
+    logger.debug({ id }, '[WorkshopService] Récupération des données de fiche PDF');
+
+    const repair = await prisma.repair.findUnique({
+      where: { id },
+      include: {
+        incident: {
+          include: {
+            asset: {
+              select: {
+                id: true,
+                inventoryNumber: true,
+                serial_number: true,
+                type: true,
+                brand: true,
+                model: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!repair) {
+      logger.warn({ id }, '[WorkshopService] Réparation introuvable pour impression');
+      return null;
+    }
+
+    const history = await prisma.historyEvent.findMany({
+      where: {
+        assetId: repair.incident.asset.id,
+        type: {
+          in: [HistoryEventType.REPAIR_STARTED, HistoryEventType.REPAIR_FINISHED],
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      repair,
+      history,
+    };
+  }
+
+  /**
    * Démarrer une réparation : incident ouvert → réparation EN_COURS, matériel EN_REPARATION.
    */
   async startRepair(data: StartRepairDto) {
     logger.info(
-      { incidentId: data.incidentId, workshopEntryDate: data.workshopEntryDate },
+      {
+        incidentId: data.incidentId,
+        workshopEntryDate: data.workshopEntryDate,
+        technicianName: data.technicianName,
+      },
       '[WorkshopService] Démarrage d\'une réparation demandé',
     );
 
@@ -158,6 +218,7 @@ export class WorkshopService {
         const repair = await tx.repair.create({
           data: {
             incidentId: data.incidentId,
+            technicianName: data.technicianName ?? null,
             workshopEntryDate: data.workshopEntryDate,
             action: data.action ?? null,
             cost: data.cost != null ? new Prisma.Decimal(data.cost) : null,
@@ -179,6 +240,7 @@ export class WorkshopService {
               repairId: repair.id,
               incidentId: incident.id,
               workshopEntryDate: repair.workshopEntryDate.toISOString(),
+              technicianName: repair.technicianName,
               action: repair.action,
               cost: repair.cost != null ? Number(repair.cost) : null,
               previousAssetStatus,

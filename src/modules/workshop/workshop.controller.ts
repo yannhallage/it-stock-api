@@ -4,8 +4,12 @@ import { logger } from '../../logger';
 import { validateStartRepairDto } from './dto/start-repair.dto';
 import { validateCloseRepairDto } from './dto/close-repair.dto';
 import { validateRepairFilterDto } from './dto/filter-repairs.dto';
+import { RepairInterventionPdfDataService } from '../pdf/services/repair-intervention-pdf-data.service';
+import { RepairInterventionPdfService } from '../pdf/services/repair-intervention-pdf.service';
 
 const workshopService = new WorkshopService();
+const repairInterventionPdfDataService = new RepairInterventionPdfDataService();
+const repairInterventionPdfService = new RepairInterventionPdfService();
 
 export class WorkshopController {
   /**
@@ -121,6 +125,9 @@ export class WorkshopController {
    *               workshopEntryDate:
    *                 type: string
    *                 format: date-time
+ *               technicianName:
+ *                 type: string
+ *                 description: Nom de la personne ayant effectué la réparation
    *               action:
    *                 type: string
    *               cost:
@@ -226,6 +233,64 @@ export class WorkshopController {
       return res.status(200).json(updated);
     } catch (error) {
       logger.error({ err: error, id }, '[WorkshopController] Erreur clôture réparation');
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/atelier/repairs/{id}/print:
+   *   get:
+   *     summary: Télécharge la fiche d'intervention atelier en PDF
+   *     tags: [Atelier (Workshop)]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: PDF généré avec succès
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       400:
+   *         description: Identifiant invalide
+   *       404:
+   *         description: Réparation non trouvée
+   */
+  printRepairSheet = async (req: Request, res: Response, next: NextFunction) => {
+    const id = parseInt(req.params.id, 10);
+    logger.debug({ id }, '[WorkshopController] GET /atelier/repairs/:id/print');
+    try {
+      if (Number.isNaN(id)) {
+        return res
+          .status(400)
+          .json({ message: "L'identifiant de la réparation doit être un entier valide." });
+      }
+
+      const payload = await workshopService.getRepairPrintPayload(id);
+
+      if (!payload) {
+        logger.warn({ id }, '[WorkshopController] Réparation non trouvée pour impression');
+        return res.status(404).json({ message: 'Réparation non trouvée.' });
+      }
+
+      const printData = repairInterventionPdfDataService.buildRepairInterventionSheet(payload);
+      const pdfBuffer = await repairInterventionPdfService.generateRepairInterventionSheet(printData);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="fiche-reparation-REP-${id}.pdf"`,
+      );
+
+      return res.status(200).send(pdfBuffer);
+    } catch (error) {
+      logger.error({ err: error, id }, '[WorkshopController] Erreur génération PDF réparation');
       return next(error);
     }
   };
