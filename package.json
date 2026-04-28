@@ -8,6 +8,9 @@
     "build": "prisma generate && tsc",
     "start": "node dist/main.js",
     "pdf:prototype": "npx ts-node src/modules/pdf/prototype/run-repair-intervention-prototype.ts",
+    "pdf:prototype:stock": "npx ts-node src/modules/pdf/prototype/run-stock-assets-prototype.ts",
+    "pdf:prototype:assignment": "npx ts-node src/modules/pdf/prototype/run-assignment-sheet-prototype.ts",
+    "pdf:prototype:suppliers": "npx ts-node src/modules/pdf/prototype/run-suppliers-prototype.ts",
     "seed": "npx prisma db seed",
     "postinstall": "prisma generate"
   },
@@ -25,6 +28,7 @@
     "pdfkit": "^0.18.0",
     "pino": "^9.14.0",
     "pino-pretty": "^13.1.3",
+    "puppeteer": "^24.42.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
