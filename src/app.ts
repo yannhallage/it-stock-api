@@ -12,6 +12,7 @@ import { assignmentsModule } from './modules/assignments/assignments.module';
 import { incidentsModule } from './modules/incidents/incidents.module';
 import { workshopModule } from './modules/workshop/workshop.module';
 import { dashboardModule } from './modules/dashboard/dashboard.module';
+import { impressionModule } from './modules/impression/impression.module';
 import { logger } from './logger';
 import { HttpError } from './errors/http-error';
 
@@ -70,6 +71,7 @@ app.use('/api/assets', authenticate, stocksModule.router);
 app.use('/api', authenticate, assignmentsModule.router);
 app.use('/api', authenticate, incidentsModule.router);
 app.use('/api', authenticate, workshopModule.router);
+app.use('/api/impression', authenticate, impressionModule.router);
 app.use('/api/dashboard', authenticate, dashboardModule.router);
 app.use('/api/suppliers', authenticate, suppliersModule.router);
 app.use('/api/material-types', authenticate, materialTypesModule.router);

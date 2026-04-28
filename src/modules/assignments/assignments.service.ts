@@ -183,6 +183,68 @@ export class AssignmentsService {
     }
   }
 
+  async listAssignmentsForPrint() {
+    logger.debug('[AssignmentsService] Listing des affectations (impression)');
+
+    const assignments = await prisma.assignment.findMany({
+      orderBy: [{ assetId: 'asc' }, { startDate: 'asc' }],
+      include: {
+        asset: {
+          select: {
+            id: true,
+            inventoryNumber: true,
+            serial_number: true,
+            type: true,
+            brand: true,
+            model: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    logger.debug(
+      { count: assignments.length },
+      '[AssignmentsService] Listing des affectations (impression) terminé',
+    );
+
+    return assignments;
+  }
+
+  async getAssignmentForPrintById(assignmentId: number) {
+    logger.debug(
+      { assignmentId },
+      '[AssignmentsService] Chargement de l affectation (impression) par identifiant',
+    );
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        asset: {
+          select: {
+            id: true,
+            inventoryNumber: true,
+            serial_number: true,
+            type: true,
+            brand: true,
+            model: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!assignment) {
+      logger.warn(
+        { assignmentId },
+        '[AssignmentsService] Affectation introuvable pour impression',
+      );
+      return null;
+    }
+
+    return assignment;
+  }
+
   async endAssignment(assignmentId: number) {
     logger.info(
       { assignmentId },

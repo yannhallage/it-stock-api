@@ -14,23 +14,12 @@ import { RepairFilterDto } from './dto/filter-repairs.dto';
 
 export class WorkshopService {
   /**
-   * Liste les réparations (avec incident + matériel), optionnellement filtrées par statut.
+   * Liste toutes les réparations (avec incident + matériel), y compris TERMINE.
    */
-  async listRepairs(params: RepairFilterDto) {
-    const { status } = params;
-
-    const where: Prisma.RepairWhereInput = {};
-    if (status != null) {
-      where.status = status;
-    }
-
-    logger.debug(
-      { status },
-      '[WorkshopService] Listing des réparations',
-    );
+  async listRepairs(_params: RepairFilterDto) {
+    logger.debug('[WorkshopService] Listing complet des réparations');
 
     const repairs = await prisma.repair.findMany({
-      where,
       orderBy: { workshopEntryDate: 'desc' },
       include: {
         incident: {
