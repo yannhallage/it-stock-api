@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
-import puppeteer from 'puppeteer';
 import { AssignmentSheetPrintView } from './assignment-sheet-pdf.types';
+import { launchPdfBrowser } from '../shared/pdf-browser';
 
 const SERVICE_NAME = 'CST DID';
 const LOCAL_LOGO_PATH =
@@ -15,10 +15,7 @@ export class AssignmentSheetPdfService {
     const logoSrc = await this.getLogoSrc();
     const html = this.buildHtml(data, logoSrc);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await launchPdfBrowser();
 
     try {
       const page = await browser.newPage();

@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
-import puppeteer from 'puppeteer';
 import { SupplierPrintView } from './suppliers-pdf.types';
+import { launchPdfBrowser } from '../shared/pdf-browser';
 
 const SERVICE_NAME = 'CST DID';
 const LOCAL_LOGO_PATH = process.env.LOGO_PATH || path.resolve(process.cwd(), 'src/modules/pdf/image.png');
@@ -13,10 +13,7 @@ export class SuppliersPdfService {
     const logoSrc = await this.getLogoSrc();
     const html = this.buildHtml(data, logoSrc);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await launchPdfBrowser();
 
     try {
       const page = await browser.newPage();
