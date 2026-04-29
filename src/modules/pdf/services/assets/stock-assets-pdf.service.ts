@@ -175,7 +175,7 @@ export class StockAssetsPdfService {
     border: 1px solid #000;
   }
 
-  .EN_STOCK { background: #e6f4ea; }
+  .EN_STOCK_NON_AFFECTE { background: #e6f4ea; }
   .AFFECTE { background: #e7f1ff; }
   .EN_REPARATION { background: #fff3cd; }
 
@@ -285,7 +285,7 @@ ${rows}
   // ========================= LOGIC =========================
 
   private computeMetrics(assets: AssetRow[], now: Date): Metrics {
-    const enStock = assets.filter(a => a.status === 'EN_STOCK').length;
+    const enStock = assets.filter(a => a.status === 'EN_STOCK_NON_AFFECTE').length;
     const affecte = assets.filter(a => a.status === 'AFFECTE').length;
     const enReparation = assets.filter(a => a.status === 'EN_REPARATION').length;
 
@@ -351,7 +351,7 @@ ${rows}
       type: '-',
       brandModel: '-',
       supplier: '-',
-      status: 'EN_STOCK',
+      status: 'EN_STOCK_NON_AFFECTE',
       entryDate: '-',
       warrantyStartDate: '-',
       warrantyEndDate: '-',

@@ -27,7 +27,7 @@ model Asset {
   supplier          String
   warrantyStartDate DateTime?
   warrantyEndDate   DateTime?
-  status            AssetStatus  @default(EN_STOCK)
+  status            AssetStatus  @default(EN_STOCK_NON_AFFECTE)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
