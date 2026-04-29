@@ -70,7 +70,7 @@ const defaultPayload: AssignmentSheetPrintPayload = [
       type: 'Laptop',
       brand: 'Lenovo',
       model: 'ThinkPad T14',
-      status: 'EN_STOCK',
+      status: 'EN_STOCK_NON_AFFECTE',
     },
   },
 ];

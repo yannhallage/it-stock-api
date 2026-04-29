@@ -292,7 +292,7 @@ export class AssignmentsService {
         const updatedAsset = await tx.asset.update({
           where: { id: assignment.assetId },
           data: {
-            status: AssetStatus.EN_STOCK,
+            status: AssetStatus.EN_STOCK_NON_AFFECTE,
           },
         });
 

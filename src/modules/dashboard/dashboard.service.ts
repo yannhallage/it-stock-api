@@ -4,7 +4,7 @@ import { AssetStatus } from '@prisma/client';
 
 const STATUT_LIBELLES: Record<AssetStatus, string> = {
   AFFECTE: 'Affecté',
-  EN_STOCK: 'En stock',
+  EN_STOCK_NON_AFFECTE: 'En stock',
   EN_REPARATION: 'En réparation',
   EN_SERVICE: 'En service',
   EN_PANNE: 'En panne',
@@ -74,7 +74,7 @@ export class DashboardService {
       repartitionByStatus.map((r) => [r.status, r._count.id]),
     ) as Partial<Record<AssetStatus, number>>;
 
-    const enStock = statusCounts.EN_STOCK ?? 0;
+    const enStock = statusCounts.EN_STOCK_NON_AFFECTE ?? 0;
     const affectes = statusCounts.AFFECTE ?? 0;
 
     const simple_data: SimpleData = {
@@ -86,7 +86,7 @@ export class DashboardService {
 
     const etatsOrdre: AssetStatus[] = [
       'AFFECTE',
-      'EN_STOCK',
+      'EN_STOCK_NON_AFFECTE',
       'EN_REPARATION',
       'EN_SERVICE',
       'EN_PANNE',
