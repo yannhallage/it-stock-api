@@ -19,10 +19,34 @@ import { HttpError } from './errors/http-error';
 const app: Application = express();
 
 // Middleware CORS
+// app.use(
+//   cors({
+//     origin: (origin, callback) => {
+//       // Toujours autoriser si pas d'origine (requêtes same-origin ou outils de test)..
+//       if (!origin) return callback(null, true);
+//       const allowedOrigins = [
+//         env.corsOrigin,
+//         'http://localhost:5173',
+//         'http://127.0.0.1:5173',
+//         'https://assnat-stock.vercel.app',
+//         'https://assnat-control.vercel.app',
+//         'https://api-control-chi.vercel.app',
+//         "http://localhost:3000",
+//         "http://81.0.220.161:8080",
+//         "http://localhost:8080"
+//       ];
+//       if (allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       } else {
+//         return callback(new Error('Origine non autorisée par CORS'), false);
+//       }
+//     },
+//     credentials: true,
+//   })
+// );
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Toujours autoriser si pas d'origine (requêtes same-origin ou outils de test)..
       if (!origin) return callback(null, true);
       const allowedOrigins = [
         env.corsOrigin,
@@ -31,10 +55,11 @@ app.use(
         'https://assnat-stock.vercel.app',
         'https://assnat-control.vercel.app',
         'https://api-control-chi.vercel.app',
-        "http://localhost:3000",
-        "http://81.0.220.161:8080",
-        "http://localhost:8080"
+        'http://localhost:3000',
+        'http://81.0.220.161:8080',
+        'http://localhost:8080'
       ];
+      console.log(`[CORS] Vérification de l'origine: ${origin}`);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
@@ -44,6 +69,7 @@ app.use(
     credentials: true,
   })
 );
+app.options('*', cors());
 app.options('*', cors());
 // Middleware pour parser le JSON
 app.use(express.json());
