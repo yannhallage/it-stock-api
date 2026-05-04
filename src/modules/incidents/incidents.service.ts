@@ -7,9 +7,8 @@ import { IncidentFilterDto } from './dto/filter-incidents.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 
 export class IncidentsService {
-  async listIncidents(params: IncidentFilterDto) {
+  private buildIncidentWhere(params: IncidentFilterDto): Prisma.IncidentWhereInput {
     const { assetId, status } = params;
-
     const where: Prisma.IncidentWhereInput = {};
 
     if (typeof assetId === 'number') {
@@ -20,8 +19,14 @@ export class IncidentsService {
       where.status = status;
     }
 
+    return where;
+  }
+
+  async listIncidents(params: IncidentFilterDto) {
+    const where = this.buildIncidentWhere(params);
+
     logger.debug(
-      { assetId, status },
+      { assetId: params.assetId, status: params.status },
       '[IncidentsService] Listing des incidents',
     );
 
@@ -45,6 +50,46 @@ export class IncidentsService {
     logger.debug(
       { count: incidents.length },
       '[IncidentsService] Listing des incidents terminé',
+    );
+
+    return incidents;
+  }
+
+  /** Données enrichies pour le PDF liste des pannes (bénéficiaire = affectation active du matériel). */
+  async listIncidentsForPdf(params: IncidentFilterDto) {
+    const where = this.buildIncidentWhere(params);
+
+    logger.debug(
+      { assetId: params.assetId, status: params.status },
+      '[IncidentsService] Listing des incidents pour impression PDF',
+    );
+
+    const incidents = await prisma.incident.findMany({
+      where,
+      orderBy: { reportedAt: 'desc' },
+      include: {
+        asset: {
+          select: {
+            id: true,
+            inventoryNumber: true,
+            type: true,
+            brand: true,
+            model: true,
+            status: true,
+            assignments: {
+              where: { endDate: null },
+              orderBy: { startDate: 'desc' },
+              take: 1,
+              select: { user: true },
+            },
+          },
+        },
+      },
+    });
+
+    logger.debug(
+      { count: incidents.length },
+      '[IncidentsService] Listing des incidents pour PDF terminé',
     );
 
     return incidents;
