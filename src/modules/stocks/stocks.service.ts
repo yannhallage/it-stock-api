@@ -194,6 +194,37 @@ export class StocksService {
       ];
     }
 
+    if (filters.department) {
+      const department = filters.department;
+      where.OR = [
+        ...(where.OR ?? []),
+        {
+          assignments: {
+            some: {
+              department: { contains: department, mode: 'insensitive' },
+            },
+          },
+        },
+        {
+          incidents: {
+            some: {
+              department: { contains: department, mode: 'insensitive' },
+            },
+          },
+        },
+      ];
+    }
+
+    if (filters.computer) {
+      const computer = filters.computer;
+      where.OR = [
+        ...(where.OR ?? []),
+        { inventoryNumber: { contains: computer, mode: 'insensitive' } },
+        { model: { contains: computer, mode: 'insensitive' } },
+        { serial_number: { contains: computer, mode: 'insensitive' } },
+      ];
+    }
+
     if (filters.type) {
       where.type = { equals: filters.type };
     }

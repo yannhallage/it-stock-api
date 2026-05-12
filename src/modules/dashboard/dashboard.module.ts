@@ -13,6 +13,7 @@ export class DashboardModule {
 
   private initializeRoutes() {
     this.router.get('/', this.controller.getDashboard);
+    this.router.get('/machines-stats', this.controller.getMachinesStats);
   }
 }
 

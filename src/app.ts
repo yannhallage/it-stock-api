@@ -13,6 +13,7 @@ import { incidentsModule } from './modules/incidents/incidents.module';
 import { workshopModule } from './modules/workshop/workshop.module';
 import { dashboardModule } from './modules/dashboard/dashboard.module';
 import { impressionModule } from './modules/impression/impression.module';
+import { screenLoansModule } from './modules/screen-loans/screen-loans.module';
 import { logger } from './logger';
 import { HttpError } from './errors/http-error';
 
@@ -99,6 +100,7 @@ app.use('/api', authenticate, incidentsModule.router);
 app.use('/api', authenticate, workshopModule.router);
 app.use('/api/impression', authenticate, impressionModule.router);
 app.use('/api/dashboard', authenticate, dashboardModule.router);
+app.use('/api/screen-loans', authenticate, screenLoansModule.router);
 app.use('/api/suppliers', authenticate, suppliersModule.router);
 app.use('/api/material-types', authenticate, materialTypesModule.router);
 

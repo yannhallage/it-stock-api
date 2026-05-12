@@ -92,6 +92,16 @@ export class StocksController {
    *           type: string
    *         description: Recherche texte (inventaire, marque, modèle, fournisseur)
    *       - in: query
+   *         name: department
+   *         schema:
+   *           type: string
+   *         description: Filtre par direction/service (affectations ou incidents)
+   *       - in: query
+   *         name: computer
+   *         schema:
+   *           type: string
+   *         description: Filtre par nom/numéro (inventaire, modèle, numéro de série)
+   *       - in: query
    *         name: type
    *         schema:
    *           type: string

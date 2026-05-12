@@ -5,14 +5,14 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts,js --exec \"npx ts-node src/main.ts\"",
-    "build": "prisma generate && tsc",
+    "build": "npx prisma generate && tsc",
     "start": "node dist/main.js",
     "pdf:prototype": "npx ts-node src/modules/pdf/prototype/run-repair-intervention-prototype.ts",
     "pdf:prototype:stock": "npx ts-node src/modules/pdf/prototype/run-stock-assets-prototype.ts",
     "pdf:prototype:assignment": "npx ts-node src/modules/pdf/prototype/run-assignment-sheet-prototype.ts",
     "pdf:prototype:suppliers": "npx ts-node src/modules/pdf/prototype/run-suppliers-prototype.ts",
     "seed": "npx prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "npx prisma generate"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

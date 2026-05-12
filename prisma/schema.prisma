@@ -35,6 +35,7 @@ model Asset {
   assignments     Assignment[]
   history         HistoryEvent[]
   incidents       Incident[]
+  screenLoans     ScreenLoan[]
 }
 
 model Assignment {
@@ -131,6 +132,7 @@ model Repair {
   incident           Incident      @relation(fields: [incidentId], references: [id])
   technicianName     String?
   workshopEntryDate  DateTime
+  workshopExitDate   DateTime?
   action             String?
   cost               Decimal?      @db.Decimal(10, 2)
   status             RepairStatus  @default(EN_COURS)
@@ -140,4 +142,18 @@ model Repair {
 
   @@index([incidentId])
   @@index([status])
+}
+
+model ScreenLoan {
+  id                 Int      @id @default(autoincrement())
+  assetId            Int
+  asset              Asset    @relation(fields: [assetId], references: [id])
+  borrowerName       String
+  loanDate           DateTime
+  expectedReturnDate DateTime
+  returnedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  @@index([assetId])
+  @@index([returnedAt])
 }

@@ -4,6 +4,7 @@ export type RepairInterventionPrintPayload = {
   repair: {
     id: number;
     workshopEntryDate: Date;
+    workshopExitDate?: Date | null;
     technicianName: string | null;
     action: string | null;
     cost: unknown;
@@ -51,6 +52,7 @@ export type RepairInterventionPrintView = {
   workshop: {
     reference: string;
     workshopEntryDate: string;
+    workshopExitDate: string;
     technicianName: string;
     action: string;
     cost: string;

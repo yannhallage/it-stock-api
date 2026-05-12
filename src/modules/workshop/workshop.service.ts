@@ -357,12 +357,14 @@ export class WorkshopService {
         const incident = repair.incident;
         const assetId = incident.assetId;
         const previousAssetStatus = incident.asset.status;
+        const workshopExitDate = new Date();
 
         await tx.repair.update({
           where: { id: repairId },
           data: {
             status: RepairStatus.TERMINE,
             outcome: data.outcome,
+            workshopExitDate,
           },
         });
 
@@ -384,6 +386,7 @@ export class WorkshopService {
               repairId,
               incidentId: incident.id,
               outcome: data.outcome,
+              workshopExitDate: workshopExitDate.toISOString(),
               previousAssetStatus,
               newAssetStatus: data.outcome,
             },

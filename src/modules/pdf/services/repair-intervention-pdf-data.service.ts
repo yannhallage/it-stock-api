@@ -49,6 +49,7 @@ export class RepairInterventionPdfDataService {
       workshop: {
         reference: `REP-${repair.id}`,
         workshopEntryDate: formatDateTime(repair.workshopEntryDate),
+        workshopExitDate: formatDateTime(repair.workshopExitDate),
         technicianName: repair.technicianName ?? 'Non renseigne',
         action: repair.action ?? 'Non renseignee',
         cost: formatMoney(repair.cost),

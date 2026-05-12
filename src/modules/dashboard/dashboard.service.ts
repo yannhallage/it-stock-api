@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma/client';
 import { logger } from '../../logger';
-import { AssetStatus } from '@prisma/client';
+import { AssetStatus, Prisma } from '@prisma/client';
 
 const STATUT_LIBELLES: Record<AssetStatus, string> = {
   AFFECTE: 'Affecté',
@@ -10,6 +10,8 @@ const STATUT_LIBELLES: Record<AssetStatus, string> = {
   EN_PANNE: 'En panne',
   HORS_SERVICE: 'Hors service',
 };
+
+export type StatsGranularity = 'week' | 'month' | 'year';
 
 export interface SimpleData {
   totalMateriels: number;
@@ -46,6 +48,12 @@ export interface DashboardData {
   top_directions_pannes: TopDirectionPannes[];
   synthese_par_etat: SyntheseEtat[];
   materiels_par_type: MaterielParType[];
+}
+
+export interface MachinesStatsPoint {
+  periodStart: Date;
+  assetsCreated: number;
+  repairsStarted: number;
 }
 
 export class DashboardService {
@@ -135,6 +143,64 @@ export class DashboardService {
       '[DashboardService] Tableau de bord calculé',
     );
 
+    return data;
+  }
+
+  async getMachinesStats(granularity: StatsGranularity): Promise<MachinesStatsPoint[]> {
+    logger.debug({ granularity }, '[DashboardService] Calcul des statistiques machines');
+
+    const [assetsRows, repairsRows] = await Promise.all([
+      prisma.$queryRaw<Array<{ period_start: Date; count: bigint }>>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, a."entryDate") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "Asset" a
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
+      prisma.$queryRaw<Array<{ period_start: Date; count: bigint }>>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, r."workshopEntryDate") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "Repair" r
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
+    ]);
+
+    const points = new Map<
+      string,
+      { periodStart: Date; assetsCreated: number; repairsStarted: number }
+    >();
+
+    for (const row of assetsRows) {
+      const key = row.period_start.toISOString();
+      points.set(key, {
+        periodStart: row.period_start,
+        assetsCreated: Number(row.count),
+        repairsStarted: 0,
+      });
+    }
+
+    for (const row of repairsRows) {
+      const key = row.period_start.toISOString();
+      const existing = points.get(key);
+      if (existing) {
+        existing.repairsStarted = Number(row.count);
+      } else {
+        points.set(key, {
+          periodStart: row.period_start,
+          assetsCreated: 0,
+          repairsStarted: Number(row.count),
+        });
+      }
+    }
+
+    const data = Array.from(points.values()).sort(
+      (a, b) => a.periodStart.getTime() - b.periodStart.getTime(),
+    );
+
+    logger.debug({ points: data.length }, '[DashboardService] Statistiques machines calculées');
     return data;
   }
 }
