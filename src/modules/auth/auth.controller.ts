@@ -36,11 +36,18 @@ export class AuthController {
    *                 type: string
    *               email:
    *                 type: string
+   *                 format: email
    *               password:
    *                 type: string
+   *                 minLength: 6
+   *               confirmPassword:
+   *                 type: string
+   *                 description: Optionnel. Si fourni, doit correspondre au mot de passe.
    *     responses:
    *       201:
-   *         description: Utilisateur créé
+   *         description: Utilisateur créé et authentifié
+   *       409:
+   *         description: Email déjà utilisé
    *       400:
    *         description: Données invalides
    */
@@ -52,9 +59,9 @@ export class AuthController {
         return res.status(400).json({ errors });
       }
 
-      const user = await authService.register(value!);
+      const session = await authService.register(value!);
 
-      return res.status(201).json(user);
+      return res.status(201).json(session);
     } catch (error) {
       return next(error);
     }
@@ -79,11 +86,13 @@ export class AuthController {
    *             properties:
    *               email:
    *                 type: string
+   *                 format: email
    *               password:
    *                 type: string
+   *                 minLength: 6
    *     responses:
    *       200:
-   *         description: Authentification réussie — utilisez "accessToken" dans Authorize (bouton cadenas)
+   *         description: Authentification réussie - utilisez "accessToken" dans Authorize (bouton cadenas)
    *         content:
    *           application/json:
    *             schema:
@@ -98,6 +107,15 @@ export class AuthController {
    *                 expiresIn:
    *                   type: integer
    *                   description: Durée de validité en secondes
+   *                 user:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     name:
+   *                       type: string
+   *                     email:
+   *                       type: string
    *       400:
    *         description: Données invalides
    *       401:
@@ -111,9 +129,9 @@ export class AuthController {
         return res.status(400).json({ errors });
       }
 
-      const token = await authService.login(value!);
+      const session = await authService.login(value!);
 
-      return res.status(200).json(token);
+      return res.status(200).json(session);
     } catch (error) {
       return next(error);
     }
@@ -146,5 +164,24 @@ export class AuthController {
       return next(error);
     }
   };
-}
 
+  /**
+   * @swagger
+   * /api/auth/logout:
+   *   post:
+   *     summary: Déconnexion côté client
+   *     tags: [Auth]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Déconnexion confirmée
+   *       401:
+   *         description: Non authentifié
+   */
+  logout = async (_req: AuthRequest, res: Response) => {
+    return res.status(200).json({
+      message: 'Déconnexion effectuée. Supprimez le token côté client.',
+    });
+  };
+}

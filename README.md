@@ -67,9 +67,10 @@ npx prisma generate
 - **Healthcheck**: `GET /health`
 - **Swagger UI**: `GET /docs`
 - **Auth**:
-  - `POST /api/auth/register`
-  - `POST /api/auth/login`
+  - `POST /api/auth/register` (crée l'utilisateur et renvoie un JWT)
+  - `POST /api/auth/login` (renvoie un JWT et le profil utilisateur)
   - `GET /api/auth/me` (protégé par Bearer token)
+  - `POST /api/auth/logout` (protégé, déconnexion stateless côté client)
 
 ### Étapes pour démarrer
 

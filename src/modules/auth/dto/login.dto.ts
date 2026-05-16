@@ -5,8 +5,14 @@ export interface LoginDto {
 
 export const validateLoginDto = (body: any): { value?: LoginDto; errors?: string[] } => {
   const errors: string[] = [];
+  const email = typeof body?.email === 'string' ? body.email.toLowerCase().trim() : '';
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (typeof body.email !== 'string' || !body.email.includes('@')) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { errors: ['Le corps de la requête doit être un objet JSON.'] };
+  }
+
+  if (!emailPattern.test(email)) {
     errors.push("L'email est requis et doit être valide.");
   }
 
@@ -19,7 +25,7 @@ export const validateLoginDto = (body: any): { value?: LoginDto; errors?: string
   }
 
   const value: LoginDto = {
-    email: body.email.toLowerCase().trim(),
+    email,
     password: body.password,
   };
 

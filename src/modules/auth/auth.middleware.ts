@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { logger } from '../../logger';
 
@@ -13,18 +13,28 @@ export interface AuthRequest extends Request {
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader) {
     logger.warn(
       { path: req.path },
-      '[AuthMiddleware] Requête sans header Authorization ou format invalide',
+      '[AuthMiddleware] Requête sans header Authorization',
     );
     return res.status(401).json({ message: 'Token manquant ou invalide.' });
   }
 
-  const token = authHeader.substring(7);
+  const [scheme, token] = authHeader.trim().split(/\s+/);
+
+  if (scheme?.toLowerCase() !== 'bearer' || !token) {
+    logger.warn({ path: req.path }, '[AuthMiddleware] Format Authorization invalide');
+    return res.status(401).json({ message: 'Token manquant ou invalide.' });
+  }
 
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { sub: string; email: string };
+    const payload = jwt.verify(token, env.jwtSecret);
+
+    if (!isAuthPayload(payload)) {
+      logger.warn({ path: req.path }, '[AuthMiddleware] Payload JWT invalide');
+      return res.status(401).json({ message: 'Token invalide ou expiré.' });
+    }
 
     req.user = {
       id: payload.sub,
@@ -43,3 +53,10 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 
+const isAuthPayload = (payload: string | JwtPayload): payload is JwtPayload & { sub: string; email: string } => {
+  return (
+    typeof payload === 'object' &&
+    typeof payload.sub === 'string' &&
+    typeof payload.email === 'string'
+  );
+};

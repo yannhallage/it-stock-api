@@ -16,6 +16,7 @@ export class AuthModule {
     this.router.post('/register', this.controller.register);
     this.router.post('/login', this.controller.login);
     this.router.get('/me', authenticate, this.controller.me);
+    this.router.post('/logout', authenticate, this.controller.logout);
   }
 }
 
