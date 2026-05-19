@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma/client';
 import { logger } from '../../logger';
-import { Prisma } from '@prisma/client';
+import { AssetStatus, HistoryEventType, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateScreenLoanDto } from './dto/create-screen-loan.dto';
 import { ScreenLoanFilterDto } from './dto/filter-screen-loans.dto';
@@ -9,12 +9,20 @@ export class ScreenLoansService {
   async createLoan(data: CreateScreenLoanDto) {
     logger.info(
       { assetId: data.assetId, borrowerName: data.borrowerName },
-      '[ScreenLoansService] Création emprunt écran demandée',
+      '[ScreenLoansService] Création emprunt matériel demandée',
     );
 
     const asset = await prisma.asset.findUnique({ where: { id: data.assetId } });
     if (!asset) {
       return null;
+    }
+
+    if (asset.status !== AssetStatus.EN_STOCK_NON_AFFECTE) {
+      throw new HttpError(
+        400,
+        'Seul un matériel en stock non affecté peut être prêté.',
+        'SCREEN_LOAN_ASSET_NOT_AVAILABLE',
+      );
     }
 
     const existingActive = await prisma.screenLoan.findFirst({
@@ -23,31 +31,59 @@ export class ScreenLoansService {
     if (existingActive) {
       throw new HttpError(
         400,
-        "Un emprunt est déjà en cours pour cet écran (non retourné).",
+        'Un emprunt est déjà en cours pour ce matériel (non retourné).',
         'SCREEN_LOAN_ALREADY_ACTIVE',
       );
     }
 
     try {
-      const loan = await prisma.screenLoan.create({
-        data: {
-          assetId: data.assetId,
-          borrowerName: data.borrowerName,
-          loanDate: data.loanDate,
-          expectedReturnDate: data.expectedReturnDate,
-        },
-        include: {
-          asset: {
-            select: {
-              id: true,
-              inventoryNumber: true,
-              type: true,
-              brand: true,
-              model: true,
-              status: true,
+      const loan = await prisma.$transaction(async (tx) => {
+        const created = await tx.screenLoan.create({
+          data: {
+            assetId: data.assetId,
+            borrowerName: data.borrowerName,
+            borrowerDepartment: data.borrowerDepartment,
+            loanDate: data.loanDate,
+            expectedReturnDate: data.expectedReturnDate,
+            note: data.note,
+          },
+        });
+
+        await tx.asset.update({
+          where: { id: data.assetId },
+          data: { status: AssetStatus.EN_PRET },
+        });
+
+        await tx.historyEvent.create({
+          data: {
+            assetId: data.assetId,
+            type: HistoryEventType.STATUS_CHANGED,
+            payload: {
+              from: asset.status,
+              to: AssetStatus.EN_PRET,
+              screenLoanId: created.id,
+              borrowerName: created.borrowerName,
+              borrowerDepartment: created.borrowerDepartment,
+              note: created.note,
             },
           },
-        },
+        });
+
+        return tx.screenLoan.findUnique({
+          where: { id: created.id },
+          include: {
+            asset: {
+              select: {
+                id: true,
+                inventoryNumber: true,
+                type: true,
+                brand: true,
+                model: true,
+                status: true,
+              },
+            },
+          },
+        });
       });
 
       return loan;
@@ -55,7 +91,7 @@ export class ScreenLoansService {
       if (error instanceof Prisma.PrismaClientValidationError) {
         throw new HttpError(
           400,
-          "Les données fournies pour créer l'emprunt d'écran sont invalides.",
+          "Les données fournies pour créer l'emprunt de matériel sont invalides.",
           'SCREEN_LOAN_VALIDATION_ERROR',
         );
       }
@@ -64,7 +100,7 @@ export class ScreenLoansService {
   }
 
   async listLoans(filters: ScreenLoanFilterDto) {
-    logger.debug({ filters }, '[ScreenLoansService] Listing emprunts écrans');
+    logger.debug({ filters }, '[ScreenLoansService] Listing emprunts matériel');
 
     const where: any = {};
 
@@ -99,9 +135,12 @@ export class ScreenLoansService {
   }
 
   async returnLoan(id: number) {
-    logger.info({ id }, '[ScreenLoansService] Retour emprunt écran demandé');
+    logger.info({ id }, '[ScreenLoansService] Retour emprunt matériel demandé');
 
-    const existing = await prisma.screenLoan.findUnique({ where: { id } });
+    const existing = await prisma.screenLoan.findUnique({
+      where: { id },
+      include: { asset: true },
+    });
     if (!existing) {
       return null;
     }
@@ -110,21 +149,49 @@ export class ScreenLoansService {
       throw new HttpError(400, 'Cet emprunt est déjà marqué comme retourné.', 'SCREEN_LOAN_ALREADY_RETURNED');
     }
 
-    const updated = await prisma.screenLoan.update({
-      where: { id },
-      data: { returnedAt: new Date() },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      const returnedAt = new Date();
+
+      await tx.screenLoan.update({
+        where: { id },
+        data: { returnedAt },
+      });
+
+      if (existing.asset.status === AssetStatus.EN_PRET) {
+        await tx.asset.update({
+          where: { id: existing.assetId },
+          data: { status: AssetStatus.EN_STOCK_NON_AFFECTE },
+        });
+
+        await tx.historyEvent.create({
+          data: {
+            assetId: existing.assetId,
+            type: HistoryEventType.STATUS_CHANGED,
+            payload: {
+              from: AssetStatus.EN_PRET,
+              to: AssetStatus.EN_STOCK_NON_AFFECTE,
+              screenLoanId: existing.id,
+              returnedAt: returnedAt.toISOString(),
+            },
+          },
+        });
+      }
+
+      return tx.screenLoan.findUnique({
+        where: { id },
+        include: {
+          asset: {
+            select: {
+              id: true,
+              inventoryNumber: true,
+              type: true,
+              brand: true,
+              model: true,
+              status: true,
+            },
           },
         },
-      },
+      });
     });
 
     return updated;

@@ -58,6 +58,7 @@ export class AssignmentsService {
 
         if (
           asset.status === AssetStatus.EN_PANNE ||
+          asset.status === AssetStatus.EN_PRET ||
           asset.status === AssetStatus.EN_REPARATION ||
           asset.status === AssetStatus.HORS_SERVICE
         ) {

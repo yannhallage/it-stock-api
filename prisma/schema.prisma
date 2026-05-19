@@ -71,6 +71,7 @@ model MaterialType {
 enum AssetStatus {
   EN_STOCK_NON_AFFECTE
   AFFECTE
+  EN_PRET
   EN_PANNE
   EN_REPARATION
   EN_SERVICE
@@ -149,9 +150,11 @@ model ScreenLoan {
   assetId            Int
   asset              Asset    @relation(fields: [assetId], references: [id])
   borrowerName       String
+  borrowerDepartment String?
   loanDate           DateTime
   expectedReturnDate DateTime
   returnedAt         DateTime?
+  note               String?
   createdAt          DateTime @default(now())
 
   @@index([assetId])

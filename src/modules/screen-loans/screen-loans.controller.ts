@@ -10,14 +10,14 @@ export class ScreenLoansController {
    * @swagger
    * tags:
    *   name: ScreenLoans
-   *   description: Gestion des emprunts d'écrans
+   *   description: Gestion des emprunts de matériel
    */
 
   /**
    * @swagger
    * /api/screen-loans:
    *   post:
-   *     summary: Enregistre un emprunt d'écran
+   *     summary: Enregistre un emprunt de matériel
    *     tags: [ScreenLoans]
    *     requestBody:
    *       required: true
@@ -33,8 +33,10 @@ export class ScreenLoansController {
    *             properties:
    *               assetId: { type: integer }
    *               borrowerName: { type: string }
+   *               borrowerDepartment: { type: string }
    *               loanDate: { type: string, format: date-time }
    *               expectedReturnDate: { type: string, format: date-time }
+   *               note: { type: string }
    *     responses:
    *       201:
    *         description: Emprunt créé
@@ -48,7 +50,7 @@ export class ScreenLoansController {
       const { value, errors } = validateCreateScreenLoanDto(req.body);
       if (errors) {
         return res.status(400).json({
-          message: "Les données fournies pour créer l'emprunt d'écran sont invalides.",
+          message: "Les données fournies pour créer l'emprunt de matériel sont invalides.",
           errors,
         });
       }
@@ -68,7 +70,7 @@ export class ScreenLoansController {
    * @swagger
    * /api/screen-loans:
    *   get:
-   *     summary: Liste les emprunts d'écrans
+   *     summary: Liste les emprunts de matériel
    *     tags: [ScreenLoans]
    *     parameters:
    *       - in: query
@@ -109,7 +111,7 @@ export class ScreenLoansController {
    * @swagger
    * /api/screen-loans/{id}/return:
    *   patch:
-   *     summary: Marque un emprunt d'écran comme retourné
+   *     summary: Marque un emprunt de matériel comme retourné
    *     tags: [ScreenLoans]
    *     parameters:
    *       - in: path
