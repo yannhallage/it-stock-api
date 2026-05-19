@@ -1,8 +1,10 @@
 export interface CreateScreenLoanDto {
   assetId: number;
   borrowerName: string;
+  borrowerDepartment?: string;
   loanDate: Date;
   expectedReturnDate: Date;
+  note?: string;
 }
 
 export const validateCreateScreenLoanDto = (
@@ -25,6 +27,14 @@ export const validateCreateScreenLoanDto = (
     errors.push("Le nom de l'emprunteur (borrowerName) doit être une chaîne de caractères.");
   } else if (String(body.borrowerName).trim().length === 0) {
     errors.push("Le nom de l'emprunteur (borrowerName) ne peut pas être vide.");
+  }
+
+  if (body.borrowerDepartment != null && typeof body.borrowerDepartment !== 'string') {
+    errors.push("La direction de l'emprunteur (borrowerDepartment) doit être une chaîne de caractères.");
+  }
+
+  if (body.note != null && typeof body.note !== 'string') {
+    errors.push('La note doit être une chaîne de caractères.');
   }
 
   if (typeof body.loanDate !== 'string') {
@@ -65,8 +75,16 @@ export const validateCreateScreenLoanDto = (
     value: {
       assetId: parseInt(String(body.assetId), 10),
       borrowerName: String(body.borrowerName).trim(),
+      borrowerDepartment:
+        typeof body.borrowerDepartment === 'string' && body.borrowerDepartment.trim().length > 0
+          ? body.borrowerDepartment.trim()
+          : undefined,
       loanDate: loanDate!,
       expectedReturnDate: expectedReturnDate!,
+      note:
+        typeof body.note === 'string' && body.note.trim().length > 0
+          ? body.note.trim()
+          : undefined,
     },
   };
 };

@@ -81,7 +81,7 @@ export class DashboardController {
    *         description: Regroupement des données par semaine/mois/année
    *     responses:
    *       200:
-   *         description: Points agrégés par période (machines enregistrées + réparations démarrées)
+   *         description: Points agrégés par période (machines enregistrées, mouvements de stock, réparations)
    *         content:
    *           application/json:
    *             schema:
@@ -91,7 +91,12 @@ export class DashboardController {
    *                 properties:
    *                   periodStart: { type: string, format: date-time }
    *                   assetsCreated: { type: number }
+   *                   assignmentsCreated: { type: number }
+   *                   loansCreated: { type: number }
+   *                   loansReturned: { type: number }
    *                   repairsStarted: { type: number }
+   *                   repairsFinished: { type: number }
+   *                   totalActivity: { type: number }
    *       400:
    *         description: Paramètre granularity invalide
    */

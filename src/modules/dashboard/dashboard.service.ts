@@ -5,6 +5,7 @@ import { AssetStatus, Prisma } from '@prisma/client';
 const STATUT_LIBELLES: Record<AssetStatus, string> = {
   AFFECTE: 'Affecté',
   EN_STOCK_NON_AFFECTE: 'En stock',
+  EN_PRET: 'En prêt',
   EN_REPARATION: 'En réparation',
   EN_SERVICE: 'En service',
   EN_PANNE: 'En panne',
@@ -53,7 +54,12 @@ export interface DashboardData {
 export interface MachinesStatsPoint {
   periodStart: Date;
   assetsCreated: number;
+  assignmentsCreated: number;
+  loansCreated: number;
+  loansReturned: number;
   repairsStarted: number;
+  repairsFinished: number;
+  totalActivity: number;
 }
 
 export class DashboardService {
@@ -95,6 +101,7 @@ export class DashboardService {
     const etatsOrdre: AssetStatus[] = [
       'AFFECTE',
       'EN_STOCK_NON_AFFECTE',
+      'EN_PRET',
       'EN_REPARATION',
       'EN_SERVICE',
       'EN_PANNE',
@@ -149,7 +156,16 @@ export class DashboardService {
   async getMachinesStats(granularity: StatsGranularity): Promise<MachinesStatsPoint[]> {
     logger.debug({ granularity }, '[DashboardService] Calcul des statistiques machines');
 
-    const [assetsRows, repairsRows] = await Promise.all([
+    type CountRow = { period_start: Date; count: bigint };
+
+    const [
+      assetsRows,
+      assignmentsRows,
+      loansCreatedRows,
+      loansReturnedRows,
+      repairsStartedRows,
+      repairsFinishedRows,
+    ] = await Promise.all([
       prisma.$queryRaw<Array<{ period_start: Date; count: bigint }>>(Prisma.sql`
         SELECT
           date_trunc(${granularity}, a."entryDate") AS period_start,
@@ -158,7 +174,32 @@ export class DashboardService {
         GROUP BY 1
         ORDER BY 1 ASC
       `),
-      prisma.$queryRaw<Array<{ period_start: Date; count: bigint }>>(Prisma.sql`
+      prisma.$queryRaw<CountRow[]>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, a."startDate") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "Assignment" a
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
+      prisma.$queryRaw<CountRow[]>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, sl."loanDate") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "ScreenLoan" sl
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
+      prisma.$queryRaw<CountRow[]>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, sl."returnedAt") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "ScreenLoan" sl
+        WHERE sl."returnedAt" IS NOT NULL
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
+      prisma.$queryRaw<CountRow[]>(Prisma.sql`
         SELECT
           date_trunc(${granularity}, r."workshopEntryDate") AS period_start,
           COUNT(*)::bigint AS count
@@ -166,37 +207,63 @@ export class DashboardService {
         GROUP BY 1
         ORDER BY 1 ASC
       `),
+      prisma.$queryRaw<CountRow[]>(Prisma.sql`
+        SELECT
+          date_trunc(${granularity}, r."workshopExitDate") AS period_start,
+          COUNT(*)::bigint AS count
+        FROM "Repair" r
+        WHERE r."workshopExitDate" IS NOT NULL
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
     ]);
 
-    const points = new Map<
-      string,
-      { periodStart: Date; assetsCreated: number; repairsStarted: number }
-    >();
+    const points = new Map<string, Omit<MachinesStatsPoint, 'totalActivity'>>();
 
-    for (const row of assetsRows) {
-      const key = row.period_start.toISOString();
-      points.set(key, {
-        periodStart: row.period_start,
-        assetsCreated: Number(row.count),
-        repairsStarted: 0,
-      });
-    }
-
-    for (const row of repairsRows) {
-      const key = row.period_start.toISOString();
+    const ensurePoint = (periodStart: Date) => {
+      const key = periodStart.toISOString();
       const existing = points.get(key);
-      if (existing) {
-        existing.repairsStarted = Number(row.count);
-      } else {
-        points.set(key, {
-          periodStart: row.period_start,
-          assetsCreated: 0,
-          repairsStarted: Number(row.count),
-        });
-      }
-    }
+      if (existing) return existing;
+      const point: Omit<MachinesStatsPoint, 'totalActivity'> = {
+        periodStart,
+        assetsCreated: 0,
+        assignmentsCreated: 0,
+        loansCreated: 0,
+        loansReturned: 0,
+        repairsStarted: 0,
+        repairsFinished: 0,
+      };
+      points.set(key, point);
+      return point;
+    };
 
-    const data = Array.from(points.values()).sort(
+    const applyRows = (
+      rows: CountRow[],
+      field: keyof Omit<MachinesStatsPoint, 'periodStart' | 'totalActivity'>,
+    ) => {
+      for (const row of rows) {
+        const point = ensurePoint(row.period_start);
+        point[field] = Number(row.count);
+      }
+    };
+
+    applyRows(assetsRows, 'assetsCreated');
+    applyRows(assignmentsRows, 'assignmentsCreated');
+    applyRows(loansCreatedRows, 'loansCreated');
+    applyRows(loansReturnedRows, 'loansReturned');
+    applyRows(repairsStartedRows, 'repairsStarted');
+    applyRows(repairsFinishedRows, 'repairsFinished');
+
+    const data = Array.from(points.values()).map((point) => {
+      const totalActivity =
+        point.assetsCreated +
+        point.assignmentsCreated +
+        point.loansCreated +
+        point.loansReturned +
+        point.repairsStarted +
+        point.repairsFinished;
+      return { ...point, totalActivity };
+    }).sort(
       (a, b) => a.periodStart.getTime() - b.periodStart.getTime(),
     );
 
