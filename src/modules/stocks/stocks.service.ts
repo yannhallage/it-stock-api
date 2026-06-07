@@ -328,6 +328,88 @@ export class StocksService {
     }
   }
 
+  async getAssetByInventoryNumber(inventoryNumber: string) {
+    const normalizedInventoryNumber = inventoryNumber.trim();
+
+    if (!normalizedInventoryNumber) {
+      throw new HttpError(
+        400,
+        "Le numero d'inventaire du materiel est obligatoire.",
+        'ASSET_INVENTORY_NUMBER_REQUIRED',
+      );
+    }
+
+    logger.debug(
+      { inventoryNumber: normalizedInventoryNumber },
+      '[StocksService] Recuperation du materiel par numero inventaire',
+    );
+
+    try {
+      const asset = await prisma.asset.findUnique({
+        where: { inventoryNumber: normalizedInventoryNumber },
+        include: {
+          assignments: {
+            orderBy: { startDate: 'desc' },
+          },
+          history: {
+            orderBy: { createdAt: 'desc' },
+          },
+          incidents: {
+            include: {
+              repairs: {
+                orderBy: { workshopEntryDate: 'desc' },
+              },
+            },
+            orderBy: { reportedAt: 'desc' },
+          },
+        },
+      });
+
+      if (!asset) {
+        logger.warn(
+          { inventoryNumber: normalizedInventoryNumber },
+          '[StocksService] Materiel non trouve par numero inventaire',
+        );
+        return null;
+      }
+
+      const now = new Date();
+      const currentAssignment =
+        asset.assignments.find((assignment) => !assignment.endDate || assignment.endDate >= now) ??
+        null;
+
+      const { assignments: _assignments, incidents: _incidents, ...assetData } = asset;
+
+      return {
+        ...assetData,
+        currentAssignment,
+        history: asset.history,
+        incidentsWithRepairs: asset.incidents,
+        currentStatus: asset.status,
+      };
+    } catch (error: any) {
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        logger.warn(
+          { inventoryNumber: normalizedInventoryNumber, error },
+          '[StocksService] Numero inventaire invalide lors de la recuperation du materiel',
+        );
+
+        throw new HttpError(
+          400,
+          "Le numero d'inventaire fourni pour recuperer le materiel est invalide.",
+          'ASSET_INVENTORY_NUMBER_VALIDATION_ERROR',
+        );
+      }
+
+      logger.error(
+        { error, inventoryNumber: normalizedInventoryNumber },
+        '[StocksService] Erreur inattendue lors de la recuperation du materiel par numero inventaire',
+      );
+
+      throw error;
+    }
+  }
+
   async deleteAsset(id: number) {
     logger.info({ id }, '[StocksService] Suppression de matériel demandée');
 

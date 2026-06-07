@@ -134,6 +134,41 @@ export class ScreenLoansService {
     return loans;
   }
 
+  async getLoanById(id: number) {
+    if (!Number.isInteger(id) || id < 1) {
+      throw new HttpError(
+        400,
+        "L'identifiant de l'emprunt doit etre un entier strictement positif.",
+        'INVALID_SCREEN_LOAN_ID',
+      );
+    }
+
+    logger.debug({ id }, '[ScreenLoansService] Recuperation emprunt materiel par id');
+
+    const loan = await prisma.screenLoan.findUnique({
+      where: { id },
+      include: {
+        asset: {
+          select: {
+            id: true,
+            inventoryNumber: true,
+            type: true,
+            brand: true,
+            model: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!loan) {
+      logger.warn({ id }, '[ScreenLoansService] Emprunt materiel non trouve');
+      return null;
+    }
+
+    return loan;
+  }
+
   async returnLoan(id: number) {
     logger.info({ id }, '[ScreenLoansService] Retour emprunt matériel demandé');
 

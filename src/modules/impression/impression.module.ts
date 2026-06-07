@@ -13,6 +13,11 @@ export class ImpressionModule {
 
   private initializeRoutes() {
     this.router.get('/printAssets', this.controller.printAssets);
+    this.router.get('/printAsset', this.controller.printAsset);
+    this.router.get('/printAsset/:inventoryNumber', this.controller.printAsset);
+    this.router.get('/printScreenLoans', this.controller.printScreenLoans);
+    this.router.get('/printScreenLoan', this.controller.printScreenLoan);
+    this.router.get('/printScreenLoan/:loanId', this.controller.printScreenLoan);
     this.router.get('/printAssigment', this.controller.printAssigment);
     this.router.get('/printSuppliers', this.controller.printSuppliers);
     this.router.get('/printIncidents', this.controller.printIncidents);
