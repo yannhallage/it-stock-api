@@ -188,6 +188,8 @@ export class StocksService {
       const search = filters.search;
       where.OR = [
         { inventoryNumber: { contains: search, mode: 'insensitive' } },
+        { serial_number: { contains: search, mode: 'insensitive' } },
+        { type: { contains: search, mode: 'insensitive' } },
         { brand: { contains: search, mode: 'insensitive' } },
         { model: { contains: search, mode: 'insensitive' } },
         { supplier: { contains: search, mode: 'insensitive' } },
@@ -231,6 +233,13 @@ export class StocksService {
 
     if (filters.status) {
       where.status = filters.status as any;
+    }
+
+    if (filters.entryDateFrom || filters.entryDateTo) {
+      where.entryDate = {
+        ...(filters.entryDateFrom ? { gte: filters.entryDateFrom } : {}),
+        ...(filters.entryDateTo ? { lte: filters.entryDateTo } : {}),
+      };
     }
 
     try {

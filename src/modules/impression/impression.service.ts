@@ -5,6 +5,7 @@ import { IncidentsService } from '../incidents/incidents.service';
 import { ScreenLoansService } from '../screen-loans/screen-loans.service';
 import { StockAssetsPdfDataService } from '../pdf/services/assets/stock-assets-pdf-data.service';
 import { StockAssetsPdfService } from '../pdf/services/assets/stock-assets-pdf.service';
+import { AssetFilterDto } from '../stocks/dto/filter-assets.dto';
 import { AssignmentSheetPdfDataService } from '../pdf/services/assignments/assignment-sheet-pdf-data.service';
 import { AssignmentSheetPdfService } from '../pdf/services/assignments/assignment-sheet-pdf.service';
 import { SuppliersPdfDataService } from '../pdf/services/suppliers/suppliers-pdf-data.service';
@@ -32,10 +33,36 @@ export class ImpressionService {
   private readonly assetDetailPdfService = new AssetDetailPdfService();
   private readonly screenLoansPdfService = new ScreenLoansPdfService();
 
-  async printAssets(): Promise<Buffer> {
-    const assets = await this.stocksService.getAssets({});
-    const printData = this.stockAssetsPdfDataService.buildStockAssetsSheet(assets);
+  async printAssets(filters: AssetFilterDto = {}): Promise<Buffer> {
+    const assets = await this.stocksService.getAssets(filters);
+    const printData = this.stockAssetsPdfDataService.buildStockAssetsSheet(assets, {
+      filters: this.buildAssetFilterSummary(filters),
+    });
     return this.stockAssetsPdfService.generateStockAssetsSheet(printData);
+  }
+
+  private buildAssetFilterSummary(filters: AssetFilterDto): string[] {
+    const summary: string[] = [];
+
+    if (filters.search) summary.push(`Recherche: ${filters.search}`);
+    if (filters.type) summary.push(`Type: ${filters.type}`);
+    if (filters.status) summary.push(`Etat: ${filters.status.replace(/_/g, ' ')}`);
+
+    if (filters.entryDateFrom || filters.entryDateTo) {
+      const from = filters.entryDateFrom ? this.formatDate(filters.entryDateFrom) : 'debut';
+      const to = filters.entryDateTo ? this.formatDate(filters.entryDateTo) : 'fin';
+      summary.push(`Periode entree: ${from} - ${to}`);
+    }
+
+    return summary;
+  }
+
+  private formatDate(date: Date): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
   }
 
   async printAsset(inventoryNumber: string): Promise<Buffer> {

@@ -1,44 +1,111 @@
+import { AssetStatus } from '@prisma/client';
+
 export interface AssetFilterDto {
   search?: string;
   type?: string;
-  status?: string;
+  status?: AssetStatus;
   department?: string;
   computer?: string;
+  entryDateFrom?: Date;
+  entryDateTo?: Date;
 }
+
+const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+
+const readText = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) return readText(value[0]);
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const readDate = (
+  value: unknown,
+  fieldLabel: string,
+  errors: string[],
+  boundary: 'start' | 'end',
+): Date | undefined => {
+  const raw = readText(value);
+  if (!raw) return undefined;
+
+  if (typeof value !== 'string' && !Array.isArray(value)) {
+    errors.push(`${fieldLabel} doit etre une date valide.`);
+    return undefined;
+  }
+
+  const date =
+    dateOnlyPattern.test(raw) && boundary === 'start'
+      ? new Date(`${raw}T00:00:00.000Z`)
+      : dateOnlyPattern.test(raw) && boundary === 'end'
+        ? new Date(`${raw}T23:59:59.999Z`)
+        : new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    errors.push(`${fieldLabel} doit etre une date valide.`);
+    return undefined;
+  }
+
+  return date;
+};
 
 export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; errors?: string[] } => {
   const errors: string[] = [];
 
-  const search =
-    typeof query.search === 'string' && query.search.trim().length > 0 ? query.search.trim() : undefined;
-  const type = typeof query.type === 'string' && query.type.trim().length > 0 ? query.type.trim() : undefined;
-  const status =
-    typeof query.status === 'string' && query.status.trim().length > 0 ? query.status.trim() : undefined;
-  const department =
-    typeof query.department === 'string' && query.department.trim().length > 0
-      ? query.department.trim()
-      : undefined;
-  const computer =
-    typeof query.computer === 'string' && query.computer.trim().length > 0 ? query.computer.trim() : undefined;
+  const search = readText(query.search) ?? readText(query.q);
+  const type = readText(query.type);
+  const department = readText(query.department);
+  const computer = readText(query.computer);
+  const entryDateFrom = readDate(
+    query.entryDateFrom ?? query.from ?? query.startDate,
+    'entryDateFrom',
+    errors,
+    'start',
+  );
+  const entryDateTo = readDate(
+    query.entryDateTo ?? query.to ?? query.endDate,
+    'entryDateTo',
+    errors,
+    'end',
+  );
 
-  if (query.search != null && typeof query.search !== 'string') {
-    errors.push('Le filtre de recherche doit être une chaîne de caractères.');
+  let status: AssetStatus | undefined;
+  const rawStatus = readText(query.status);
+  if (rawStatus) {
+    const normalizedStatus = rawStatus.toUpperCase().replace(/-/g, '_');
+    if (Object.values(AssetStatus).includes(normalizedStatus as AssetStatus)) {
+      status = normalizedStatus as AssetStatus;
+    } else {
+      errors.push(`Le statut doit etre l'une des valeurs suivantes: ${Object.values(AssetStatus).join(', ')}.`);
+    }
   }
 
-  if (query.type != null && typeof query.type !== 'string') {
-    errors.push('Le type doit être une chaîne de caractères.');
+  if (query.search != null && typeof query.search !== 'string' && !Array.isArray(query.search)) {
+    errors.push('Le filtre de recherche doit etre une chaine de caracteres.');
   }
 
-  if (query.status != null && typeof query.status !== 'string') {
-    errors.push('Le statut doit être une chaîne de caractères.');
+  if (query.q != null && typeof query.q !== 'string' && !Array.isArray(query.q)) {
+    errors.push('Le filtre q doit etre une chaine de caracteres.');
   }
 
-  if (query.department != null && typeof query.department !== 'string') {
-    errors.push('La direction/service (department) doit être une chaîne de caractères.');
+  if (query.type != null && typeof query.type !== 'string' && !Array.isArray(query.type)) {
+    errors.push('Le type doit etre une chaine de caracteres.');
   }
 
-  if (query.computer != null && typeof query.computer !== 'string') {
-    errors.push('Le filtre computer doit être une chaîne de caractères.');
+  if (query.status != null && typeof query.status !== 'string' && !Array.isArray(query.status)) {
+    errors.push('Le statut doit etre une chaine de caracteres.');
+  }
+
+  if (query.department != null && typeof query.department !== 'string' && !Array.isArray(query.department)) {
+    errors.push('La direction/service (department) doit etre une chaine de caracteres.');
+  }
+
+  if (query.computer != null && typeof query.computer !== 'string' && !Array.isArray(query.computer)) {
+    errors.push('Le filtre computer doit etre une chaine de caracteres.');
+  }
+
+  if (entryDateFrom && entryDateTo && entryDateFrom.getTime() > entryDateTo.getTime()) {
+    errors.push('La date de debut ne peut pas etre posterieure a la date de fin.');
   }
 
   if (errors.length > 0) {
@@ -52,7 +119,8 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
       status,
       department,
       computer,
+      entryDateFrom,
+      entryDateTo,
     },
   };
 };
-
