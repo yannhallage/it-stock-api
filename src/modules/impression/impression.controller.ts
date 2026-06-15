@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ImpressionService } from './impression.service';
 import { logger } from '../../logger';
 import { AuthRequest } from '../auth/auth.middleware';
+import { validateAssetFilterDto } from '../stocks/dto/filter-assets.dto';
 
 const impressionService = new ImpressionService();
 
@@ -30,9 +31,15 @@ export class ImpressionController {
    *       500:
    *         description: Erreur serveur
    */
-  printAssets = async (_req: Request, res: Response, next: NextFunction) => {
+  printAssets = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const pdfBuffer = await impressionService.printAssets();
+      const { value, errors } = validateAssetFilterDto(req.query);
+
+      if (errors) {
+        return res.status(400).json({ errors });
+      }
+
+      const pdfBuffer = await impressionService.printAssets(value);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="assets-report.pdf"');
       return res.status(200).send(pdfBuffer);

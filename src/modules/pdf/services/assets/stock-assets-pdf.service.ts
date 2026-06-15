@@ -14,6 +14,8 @@ type Metrics = {
   total: number;
   enStock: number;
   affecte: number;
+  enPret: number;
+  enPanne: number;
   enReparation: number;
   warrantySoon: number;
 };
@@ -52,6 +54,9 @@ export class StockAssetsPdfService {
   private buildHtml(data: StockAssetPrintView, metrics: Metrics, logoSrc: string): string {
     const rows = (data.assets.length ? data.assets : [this.emptyRow()])
       .map((row, index) => this.buildRow(index + 1, row, data.generatedAt))
+      .join('');
+    const filters = data.filters
+      .map((filter) => `<span class="filter-chip">${this.escapeHtml(filter)}</span>`)
       .join('');
 
     return `<!doctype html>
@@ -117,7 +122,20 @@ export class StockAssetsPdfService {
     font-weight: bold;
     text-decoration: underline;
     font-size: 15px;
-    margin: 15px 0;
+    margin: 15px 0 8px;
+  }
+
+  .filters {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .filter-chip {
+    display: inline-block;
+    border: 1px solid #000;
+    padding: 3px 6px;
+    margin: 0 3px 4px;
+    font-size: 10px;
   }
 
   /* KPI */
@@ -177,6 +195,8 @@ export class StockAssetsPdfService {
 
   .EN_STOCK_NON_AFFECTE { background: #e6f4ea; }
   .AFFECTE { background: #e7f1ff; }
+  .EN_PRET { background: #ede9fe; }
+  .EN_PANNE { background: #fee2e2; }
   .EN_REPARATION { background: #fff3cd; }
 
   /* FOOTER */
@@ -221,6 +241,7 @@ export class StockAssetsPdfService {
 </div>
 
 <div class="title">ETAT DU STOCK MATERIEL</div>
+<div class="filters">${filters}</div>
 
 <!-- KPI -->
 <table class="kpis">
@@ -228,6 +249,8 @@ export class StockAssetsPdfService {
 <td><div class="kpi-label">TOTAL</div><div class="kpi-value">${metrics.total}</div></td>
 <td><div class="kpi-label">EN STOCK</div><div class="kpi-value">${metrics.enStock}</div></td>
 <td><div class="kpi-label">AFFECTE</div><div class="kpi-value">${metrics.affecte}</div></td>
+<td><div class="kpi-label">EN PRET</div><div class="kpi-value">${metrics.enPret}</div></td>
+<td><div class="kpi-label">EN PANNE</div><div class="kpi-value">${metrics.enPanne}</div></td>
 <td><div class="kpi-label">REPARATION</div><div class="kpi-value">${metrics.enReparation}</div></td>
 <td><div class="kpi-label">GARANTIE <= ${EXPIRY_ALERT_DAYS}J</div><div class="kpi-value">${metrics.warrantySoon}</div></td>
 </tr>
@@ -287,6 +310,8 @@ ${rows}
   private computeMetrics(assets: AssetRow[], now: Date): Metrics {
     const enStock = assets.filter(a => a.status === 'EN_STOCK_NON_AFFECTE').length;
     const affecte = assets.filter(a => a.status === 'AFFECTE').length;
+    const enPret = assets.filter(a => a.status === 'EN_PRET').length;
+    const enPanne = assets.filter(a => a.status === 'EN_PANNE').length;
     const enReparation = assets.filter(a => a.status === 'EN_REPARATION').length;
 
     const warrantySoon = assets.filter(a => {
@@ -299,6 +324,8 @@ ${rows}
       total: assets.length,
       enStock,
       affecte,
+      enPret,
+      enPanne,
       enReparation,
       warrantySoon,
     };

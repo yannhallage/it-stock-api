@@ -20,6 +20,7 @@ export type StockAssetPrintView = {
   title: string;
   printedAt: string;
   totalAssets: number;
+  filters: string[];
   generatedAt: Date;
   assets: Array<{
     index: number;

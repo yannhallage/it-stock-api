@@ -9,7 +9,10 @@ const formatDateTime = (value: Date | null | undefined): string => {
 };
 
 export class StockAssetsPdfDataService {
-  buildStockAssetsSheet(payload: StockAssetPrintPayload): StockAssetPrintView {
+  buildStockAssetsSheet(
+    payload: StockAssetPrintPayload,
+    options: { filters?: string[] } = {},
+  ): StockAssetPrintView {
     const generatedAt = new Date();
 
     return {
@@ -18,6 +21,7 @@ export class StockAssetsPdfDataService {
       printedAt: formatDateTime(generatedAt),
       generatedAt,
       totalAssets: payload.length,
+      filters: options.filters?.length ? options.filters : ['Tous les materiels'],
       assets: payload.map((asset, index) => ({
         index: index + 1,
         inventoryNumber: asset.inventoryNumber,
