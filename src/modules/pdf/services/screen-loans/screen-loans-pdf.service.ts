@@ -2,7 +2,6 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const LOGO_PATHS = [
   process.env.LOGO_PATH,
   path.resolve(process.cwd(), 'src/modules/pdf/image.png'),
@@ -12,7 +11,8 @@ const LOGO_PATHS = [
 type ScreenLoanPrintItem = {
   id: number;
   assetId: number;
-  borrowerName: string;
+  borrowerFirstName: string;
+  borrowerLastName: string;
   borrowerDepartment: string | null;
   loanDate: Date;
   expectedReturnDate: Date;
@@ -254,7 +254,6 @@ export class ScreenLoansPdfService {
   </table>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>${this.escapeHtml(this.formatDateTime(generatedAt))}</span>
   </div>
 </body>
@@ -441,7 +440,7 @@ export class ScreenLoansPdfService {
     <div class="grid">
       ${this.infoCell('Identifiant emprunt', String(loan.id))}
       ${this.infoCell('Etat emprunt', this.statusBadge(status), true)}
-      ${this.infoCell('Emprunteur', loan.borrowerName)}
+      ${this.infoCell('Emprunteur', this.borrowerFullName(loan))}
       ${this.infoCell('Direction', loan.borrowerDepartment ?? 'N/A')}
       ${this.infoCell('Date pret', this.formatDateTime(loan.loanDate))}
       ${this.infoCell('Retour prevu', this.formatDateTime(loan.expectedReturnDate))}
@@ -477,7 +476,6 @@ export class ScreenLoansPdfService {
   </div>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>EMP-${loan.id}</span>
   </div>
 </body>
@@ -501,7 +499,6 @@ export class ScreenLoansPdfService {
     </div>
   </div>
   <div class="meta">
-    Service: ${this.escapeHtml(SERVICE_NAME)}<br>
     Date: ${this.escapeHtml(this.formatDate(generatedAt))}
   </div>
 </div>`;
@@ -522,7 +519,7 @@ export class ScreenLoansPdfService {
   <td class="num">${loan.id > 0 ? loan.id : '-'}</td>
   <td>${this.escapeHtml(loan.asset.inventoryNumber)}</td>
   <td>${this.escapeHtml(`${loan.asset.type} - ${loan.asset.brand} ${loan.asset.model}`)}</td>
-  <td>${this.escapeHtml(loan.borrowerName)}</td>
+  <td>${this.escapeHtml(this.borrowerFullName(loan))}</td>
   <td>${this.escapeHtml(loan.borrowerDepartment ?? 'N/A')}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.loanDate)) : '-'}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.expectedReturnDate)) : '-'}</td>
@@ -540,13 +537,22 @@ export class ScreenLoansPdfService {
 </div>`;
   }
 
+  private borrowerFullName(loan: ScreenLoanPrintItem): string {
+    return [loan.borrowerFirstName, loan.borrowerLastName]
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean)
+      .join(' ');
+  }
+
   private computeMetrics(loans: ScreenLoanPrintItem[], now: Date): Metrics {
     const returned = loans.filter((loan) => loan.returnedAt != null).length;
     const active = loans.filter((loan) => loan.returnedAt == null).length;
     const overdue = loans.filter(
       (loan) => loan.returnedAt == null && loan.expectedReturnDate.getTime() < now.getTime(),
     ).length;
-    const borrowers = new Set(loans.map((loan) => loan.borrowerName).filter(Boolean)).size;
+    const borrowers = new Set(
+      loans.map((loan) => this.borrowerFullName(loan)).filter(Boolean),
+    ).size;
 
     return {
       total: loans.length,
@@ -626,7 +632,8 @@ export class ScreenLoansPdfService {
     return {
       id: 0,
       assetId: 0,
-      borrowerName: '-',
+      borrowerFirstName: '',
+      borrowerLastName: '-',
       borrowerDepartment: '-',
       loanDate: new Date(0),
       expectedReturnDate: new Date(0),

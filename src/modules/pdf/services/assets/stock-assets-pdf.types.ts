@@ -34,6 +34,7 @@ export type StockAssetPrintView = {
     warrantyStartDate: string;
     warrantyEndDate: string;
     entryDateRaw: Date | null;
+    warrantyStartDateRaw: Date | null;
     warrantyEndDateRaw: Date | null;
   }>;
 };

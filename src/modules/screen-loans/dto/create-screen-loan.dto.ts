@@ -1,6 +1,7 @@
 export interface CreateScreenLoanDto {
   assetId: number;
-  borrowerName: string;
+  borrowerFirstName: string;
+  borrowerLastName: string;
   borrowerDepartment?: string;
   loanDate: Date;
   expectedReturnDate: Date;
@@ -21,12 +22,20 @@ export const validateCreateScreenLoanDto = (
     }
   }
 
-  if (body.borrowerName == null) {
-    errors.push("Le nom de l'emprunteur (borrowerName) est requis.");
-  } else if (typeof body.borrowerName !== 'string') {
-    errors.push("Le nom de l'emprunteur (borrowerName) doit être une chaîne de caractères.");
-  } else if (String(body.borrowerName).trim().length === 0) {
-    errors.push("Le nom de l'emprunteur (borrowerName) ne peut pas être vide.");
+  if (body.borrowerLastName == null) {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) est requis.");
+  } else if (typeof body.borrowerLastName !== 'string') {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) doit être une chaîne de caractères.");
+  } else if (String(body.borrowerLastName).trim().length === 0) {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) ne peut pas être vide.");
+  }
+
+  if (body.borrowerFirstName == null) {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) est requis.");
+  } else if (typeof body.borrowerFirstName !== 'string') {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) doit être une chaîne de caractères.");
+  } else if (String(body.borrowerFirstName).trim().length === 0) {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) ne peut pas être vide.");
   }
 
   if (body.borrowerDepartment != null && typeof body.borrowerDepartment !== 'string') {
@@ -74,7 +83,8 @@ export const validateCreateScreenLoanDto = (
   return {
     value: {
       assetId: parseInt(String(body.assetId), 10),
-      borrowerName: String(body.borrowerName).trim(),
+      borrowerFirstName: String(body.borrowerFirstName).trim(),
+      borrowerLastName: String(body.borrowerLastName).trim(),
       borrowerDepartment:
         typeof body.borrowerDepartment === 'string' && body.borrowerDepartment.trim().length > 0
           ? body.borrowerDepartment.trim()

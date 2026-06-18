@@ -8,7 +8,11 @@ import { ScreenLoanFilterDto } from './dto/filter-screen-loans.dto';
 export class ScreenLoansService {
   async createLoan(data: CreateScreenLoanDto) {
     logger.info(
-      { assetId: data.assetId, borrowerName: data.borrowerName },
+      {
+        assetId: data.assetId,
+        borrowerFirstName: data.borrowerFirstName,
+        borrowerLastName: data.borrowerLastName,
+      },
       '[ScreenLoansService] Création emprunt matériel demandée',
     );
 
@@ -41,7 +45,8 @@ export class ScreenLoansService {
         const created = await tx.screenLoan.create({
           data: {
             assetId: data.assetId,
-            borrowerName: data.borrowerName,
+            borrowerFirstName: data.borrowerFirstName,
+            borrowerLastName: data.borrowerLastName,
             borrowerDepartment: data.borrowerDepartment,
             loanDate: data.loanDate,
             expectedReturnDate: data.expectedReturnDate,
@@ -62,7 +67,8 @@ export class ScreenLoansService {
               from: asset.status,
               to: AssetStatus.EN_PRET,
               screenLoanId: created.id,
-              borrowerName: created.borrowerName,
+              borrowerFirstName: created.borrowerFirstName,
+              borrowerLastName: created.borrowerLastName,
               borrowerDepartment: created.borrowerDepartment,
               note: created.note,
             },
@@ -105,7 +111,10 @@ export class ScreenLoansService {
     const where: any = {};
 
     if (filters.borrowerName) {
-      where.borrowerName = { contains: filters.borrowerName, mode: 'insensitive' };
+      where.OR = [
+        { borrowerFirstName: { contains: filters.borrowerName, mode: 'insensitive' } },
+        { borrowerLastName: { contains: filters.borrowerName, mode: 'insensitive' } },
+      ];
     }
 
     if (filters.status === 'RETURNED') {

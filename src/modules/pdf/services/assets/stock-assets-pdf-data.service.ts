@@ -34,6 +34,7 @@ export class StockAssetsPdfDataService {
         warrantyStartDate: formatDateTime(asset.warrantyStartDate),
         warrantyEndDate: formatDateTime(asset.warrantyEndDate),
         entryDateRaw: asset.entryDate ?? null,
+        warrantyStartDateRaw: asset.warrantyStartDate ?? null,
         warrantyEndDateRaw: asset.warrantyEndDate ?? null,
       })),
     };

@@ -149,7 +149,8 @@ model ScreenLoan {
   id                 Int      @id @default(autoincrement())
   assetId            Int
   asset              Asset    @relation(fields: [assetId], references: [id])
-  borrowerName       String
+  borrowerFirstName  String
+  borrowerLastName   String
   borrowerDepartment String?
   loanDate           DateTime
   expectedReturnDate DateTime

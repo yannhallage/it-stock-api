@@ -3,8 +3,6 @@ import path from 'path';
 import { IncidentsListPrintView } from './incidents-list-pdf.types';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
-
 const LOCAL_LOGO_PATH = process.env.LOGO_PATH || path.resolve(process.cwd(), 'src/modules/pdf/image.png');
 
 type IncidentRow = IncidentsListPrintView['incidents'][number];
@@ -205,7 +203,6 @@ export class IncidentsListPdfService {
   </div>
 
   <div class="meta">
-    Service: ${this.escapeHtml(SERVICE_NAME)}<br>
     Date: ${this.formatDate(data.generatedAt)}
   </div>
 </div>
@@ -244,7 +241,6 @@ ${rows}
 </table>
 
 <div class="footer">
-  <span>${SERVICE_NAME}</span>
   <span>${this.escapeHtml(data.printedAt)}</span>
 </div>
 

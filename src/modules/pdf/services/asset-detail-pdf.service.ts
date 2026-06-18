@@ -2,7 +2,6 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { launchPdfBrowser } from './shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const EXPIRY_ALERT_DAYS = 90;
 const LOGO_PATHS = [
   process.env.LOGO_PATH,
@@ -295,8 +294,7 @@ export class AssetDetailPdfService {
   <div class="section">
     <div class="section-title">Garantie</div>
     <div class="grid">
-      ${this.infoCell('Debut garantie', this.formatDate(asset.warrantyStartDate))}
-      ${this.infoCell('Fin garantie', this.formatDate(asset.warrantyEndDate))}
+      ${this.infoCell('Duree garantie', this.formatWarrantyMonths(asset.warrantyStartDate, asset.warrantyEndDate, asset.entryDate))}
       ${this.infoCell('Etat garantie', warranty.status)}
       ${this.infoCell('Observation', warranty.note)}
     </div>
@@ -352,7 +350,6 @@ export class AssetDetailPdfService {
   </div>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>${this.escapeHtml(asset.inventoryNumber)}</span>
   </div>
 </body>
@@ -627,6 +624,35 @@ export class AssetDetailPdfService {
       currency: 'XOF',
       maximumFractionDigits: 0,
     }).format(candidate);
+  }
+
+  private formatWarrantyMonths(
+    start: Date | null,
+    end: Date | null,
+    entryFallback: Date | null,
+  ): string {
+    if (!end) return 'N/A';
+
+    const effectiveStart = start ?? entryFallback;
+    if (!effectiveStart) return 'N/A';
+
+    let months =
+      (end.getFullYear() - effectiveStart.getFullYear()) * 12 +
+      (end.getMonth() - effectiveStart.getMonth());
+
+    if (end.getDate() < effectiveStart.getDate()) {
+      months -= 1;
+    }
+
+    if (months <= 0) {
+      const days = Math.max(
+        0,
+        Math.round((end.getTime() - effectiveStart.getTime()) / 86400000),
+      );
+      return `${days} jour(s)`;
+    }
+
+    return `${months} mois`;
   }
 
   private formatDate(date?: Date | null): string {
