@@ -1,7 +1,8 @@
 export interface CreateScreenLoanDto {
   assetId: number;
-  borrowerName: string;
-  borrowerDepartment?: string;
+  borrowerFirstName: string;
+  borrowerLastName: string;
+  departmentId?: number;
   loanDate: Date;
   expectedReturnDate: Date;
   note?: string;
@@ -21,16 +22,27 @@ export const validateCreateScreenLoanDto = (
     }
   }
 
-  if (body.borrowerName == null) {
-    errors.push("Le nom de l'emprunteur (borrowerName) est requis.");
-  } else if (typeof body.borrowerName !== 'string') {
-    errors.push("Le nom de l'emprunteur (borrowerName) doit être une chaîne de caractères.");
-  } else if (String(body.borrowerName).trim().length === 0) {
-    errors.push("Le nom de l'emprunteur (borrowerName) ne peut pas être vide.");
+  if (body.borrowerLastName == null) {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) est requis.");
+  } else if (typeof body.borrowerLastName !== 'string') {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) doit être une chaîne de caractères.");
+  } else if (String(body.borrowerLastName).trim().length === 0) {
+    errors.push("Le nom de l'emprunteur (borrowerLastName) ne peut pas être vide.");
   }
 
-  if (body.borrowerDepartment != null && typeof body.borrowerDepartment !== 'string') {
-    errors.push("La direction de l'emprunteur (borrowerDepartment) doit être une chaîne de caractères.");
+  if (body.borrowerFirstName == null) {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) est requis.");
+  } else if (typeof body.borrowerFirstName !== 'string') {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) doit être une chaîne de caractères.");
+  } else if (String(body.borrowerFirstName).trim().length === 0) {
+    errors.push("Le prénom de l'emprunteur (borrowerFirstName) ne peut pas être vide.");
+  }
+
+  if (body.departmentId != null && body.departmentId !== '') {
+    const parsed = parseInt(String(body.departmentId), 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      errors.push("La direction de l'emprunteur (departmentId) doit être un entier strictement positif.");
+    }
   }
 
   if (body.note != null && typeof body.note !== 'string') {
@@ -74,10 +86,11 @@ export const validateCreateScreenLoanDto = (
   return {
     value: {
       assetId: parseInt(String(body.assetId), 10),
-      borrowerName: String(body.borrowerName).trim(),
-      borrowerDepartment:
-        typeof body.borrowerDepartment === 'string' && body.borrowerDepartment.trim().length > 0
-          ? body.borrowerDepartment.trim()
+      borrowerFirstName: String(body.borrowerFirstName).trim(),
+      borrowerLastName: String(body.borrowerLastName).trim(),
+      departmentId:
+        body.departmentId != null && body.departmentId !== ''
+          ? parseInt(String(body.departmentId), 10)
           : undefined,
       loanDate: loanDate!,
       expectedReturnDate: expectedReturnDate!,
@@ -88,4 +101,3 @@ export const validateCreateScreenLoanDto = (
     },
   };
 };
-

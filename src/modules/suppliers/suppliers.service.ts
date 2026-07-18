@@ -12,6 +12,8 @@ export class SuppliersService {
       data: {
         name: data.name,
         contact: data.contact,
+        email: data.email,
+        phone: data.phone,
         address: data.address,
       },
     });
@@ -24,13 +26,15 @@ export class SuppliersService {
   async listSuppliers(filters: SupplierFilterDto) {
     logger.debug({ filters }, '[SuppliersService] Listing des fournisseurs');
 
-    const where: any = {};
+    const where: any = { deletedAt: null };
 
     if (filters.search) {
       const search = filters.search;
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { contact: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
         { address: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -50,8 +54,8 @@ export class SuppliersService {
   async getSupplierById(id: number) {
     logger.debug({ id }, '[SuppliersService] Récupération du fournisseur');
 
-    const supplier = await prisma.supplier.findUnique({
-      where: { id },
+    const supplier = await prisma.supplier.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!supplier) {
@@ -64,8 +68,8 @@ export class SuppliersService {
   async updateSupplier(id: number, data: UpdateSupplierDto) {
     logger.info({ id }, '[SuppliersService] Mise à jour de fournisseur demandée');
 
-    const existing = await prisma.supplier.findUnique({
-      where: { id },
+    const existing = await prisma.supplier.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
@@ -78,6 +82,8 @@ export class SuppliersService {
       data: {
         name: data.name ?? existing.name,
         contact: data.contact !== undefined ? data.contact : existing.contact,
+        email: data.email !== undefined ? data.email : existing.email,
+        phone: data.phone !== undefined ? data.phone : existing.phone,
         address: data.address !== undefined ? data.address : existing.address,
       },
     });
@@ -90,8 +96,8 @@ export class SuppliersService {
   async deleteSupplier(id: number) {
     logger.info({ id }, '[SuppliersService] Suppression de fournisseur demandée');
 
-    const existing = await prisma.supplier.findUnique({
-      where: { id },
+    const existing = await prisma.supplier.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
@@ -99,8 +105,9 @@ export class SuppliersService {
       return false;
     }
 
-    await prisma.supplier.delete({
+    await prisma.supplier.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
 
     logger.info({ id }, '[SuppliersService] Fournisseur supprimé avec succès');
@@ -108,4 +115,3 @@ export class SuppliersService {
     return true;
   }
 }
-

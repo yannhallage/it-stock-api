@@ -27,13 +27,15 @@ export class ScreenLoansController {
    *             type: object
    *             required:
    *               - assetId
-   *               - borrowerName
+   *               - borrowerFirstName
+   *               - borrowerLastName
    *               - loanDate
    *               - expectedReturnDate
    *             properties:
    *               assetId: { type: integer }
-   *               borrowerName: { type: string }
-   *               borrowerDepartment: { type: string }
+   *               borrowerFirstName: { type: string }
+   *               borrowerLastName: { type: string }
+   *               departmentId: { type: integer }
    *               loanDate: { type: string, format: date-time }
    *               expectedReturnDate: { type: string, format: date-time }
    *               note: { type: string }

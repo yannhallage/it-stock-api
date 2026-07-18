@@ -26,48 +26,13 @@ const truncateDescription = (text: string): string => {
   return `${t.slice(0, MAX_DESCRIPTION_LEN)}…`;
 };
 
-/** Libellés affichables à partir du JSON `Assignment.user` (même logique que les fiches d’affectation). */
-const formatBeneficiaires = (input: unknown): string => {
-  if (!input || typeof input !== 'object') {
-    return 'N/A';
-  }
-
-  const record = input as Record<string, unknown>;
-  const read = (...keys: string[]): string | null => {
-    for (const key of keys) {
-      const value = record[key];
-      if (typeof value === 'string' && value.trim()) return value.trim();
-    }
-    return null;
-  };
-  const readStringArray = (...keys: string[]): string[] => {
-    for (const key of keys) {
-      const value = record[key];
-      if (Array.isArray(value)) {
-        const normalized = value
-          .filter((item): item is string => typeof item === 'string')
-          .map((item) => item.trim())
-          .filter(Boolean);
-        if (normalized.length > 0) {
-          return normalized;
-        }
-      }
-    }
-    return [];
-  };
-
-  const firstName = read('prenom', 'firstName');
-  const lastName = read('nom', 'lastName');
-  const names = readStringArray('names', 'fullNames', 'beneficiaries');
-  const fallbackName = read('name', 'fullName', 'username');
-  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
-  const fullNames =
-    (combinedName ? [combinedName] : null) ||
-    (names.length > 0 ? names : null) ||
-    (fallbackName ? [fallbackName] : null) ||
-    ['N/A'];
-
-  return fullNames.join(', ');
+const formatBeneficiaire = (user: {
+  firstName: string;
+  lastName: string;
+  email: string;
+}): string => {
+  const fullName = `${user.firstName} ${user.lastName}`.trim();
+  return fullName || user.email || 'N/A';
 };
 
 export class IncidentsListPdfDataService {
@@ -82,14 +47,14 @@ export class IncidentsListPdfDataService {
       totalIncidents: payload.length,
       incidents: payload.map((row, index) => {
         const active = row.asset.assignments[0];
-        const utilisateur = active ? formatBeneficiaires(active.user) : 'N/A';
+        const utilisateur = active ? formatBeneficiaire(active.user) : 'N/A';
 
         return {
           index: index + 1,
           inventoryNumber: row.asset.inventoryNumber,
-          assetType: row.asset.type,
-          brandModel: `${row.asset.brand} / ${row.asset.model}`,
-          department: row.department,
+          assetType: row.asset.materialType.name,
+          brandModel: `${row.asset.brand.name} / ${row.asset.model}`,
+          department: row.department.name,
           reportedAt: formatDateTime(row.reportedAt),
           reportedAtRaw: row.reportedAt,
           incidentStatus: incidentStatusLabel(row.status),

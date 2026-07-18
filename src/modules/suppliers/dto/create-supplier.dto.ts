@@ -1,6 +1,8 @@
 export interface CreateSupplierDto {
   name: string;
   contact?: string;
+  email?: string;
+  phone?: string;
   address?: string;
 }
 
@@ -13,6 +15,14 @@ export const validateCreateSupplierDto = (body: any): { value?: CreateSupplierDt
 
   if (body.contact != null && typeof body.contact !== 'string') {
     errors.push('Le contact doit être une chaîne de caractères.');
+  }
+
+  if (body.email != null && typeof body.email !== 'string') {
+    errors.push("L'email doit être une chaîne de caractères.");
+  }
+
+  if (body.phone != null && typeof body.phone !== 'string') {
+    errors.push('Le téléphone doit être une chaîne de caractères.');
   }
 
   if (body.address != null && typeof body.address !== 'string') {
@@ -29,6 +39,14 @@ export const validateCreateSupplierDto = (body: any): { value?: CreateSupplierDt
       typeof body.contact === 'string' && body.contact.trim().length > 0
         ? body.contact.trim()
         : undefined,
+    email:
+      typeof body.email === 'string' && body.email.trim().length > 0
+        ? body.email.trim()
+        : undefined,
+    phone:
+      typeof body.phone === 'string' && body.phone.trim().length > 0
+        ? body.phone.trim()
+        : undefined,
     address:
       typeof body.address === 'string' && body.address.trim().length > 0
         ? body.address.trim()
@@ -37,4 +55,3 @@ export const validateCreateSupplierDto = (body: any): { value?: CreateSupplierDt
 
   return { value };
 };
-

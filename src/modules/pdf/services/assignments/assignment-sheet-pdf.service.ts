@@ -3,10 +3,11 @@ import path from 'path';
 import { AssignmentSheetPrintView } from './assignment-sheet-pdf.types';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
-const LOCAL_LOGO_PATH =
-  process.env.LOGO_PATH ||
-  path.resolve(__dirname, '..', '..', 'image.png');
+const LOGO_PATHS = [
+  process.env.LOGO_PATH,
+  path.resolve(process.cwd(), 'src/modules/pdf/image.png'),
+  path.resolve(__dirname, '..', '..', 'image.png'),
+].filter((value): value is string => Boolean(value));
 
 type SheetRow = AssignmentSheetPrintView['sheets'][number];
 
@@ -297,12 +298,6 @@ ${content}
 
   <div class="bottom-content">
     <div class="bottom">
-      <div class="info">
-        <strong>RESPONSABLE IT</strong><br>
-        Service: ${this.escapeHtml(SERVICE_NAME)}<br>
-        Date impression: ${this.escapeHtml(data.printedAt)}
-      </div>
-
       <div class="status-box">
         <div><span>UTILISATEURS</span><span>${sheet.totals.users}</span></div>
         <div><span>ACTIFS</span><span>${sheet.totals.active}</span></div>
@@ -319,13 +314,16 @@ ${content}
   }
 
   private async getLogoSrc(): Promise<string> {
-    try {
-      if (!LOCAL_LOGO_PATH) return '';
-      const file = await readFile(LOCAL_LOGO_PATH);
-      return `data:image/png;base64,${file.toString('base64')}`;
-    } catch {
-      return '';
+    for (const logoPath of LOGO_PATHS) {
+      try {
+        const file = await readFile(logoPath);
+        return `data:image/png;base64,${file.toString('base64')}`;
+      } catch {
+        continue;
+      }
     }
+
+    return '';
   }
 
   private escapeHtml(value?: string): string {

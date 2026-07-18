@@ -88,6 +88,12 @@
     # Copy app
     COPY --from=builder /app/dist ./dist
     COPY prisma ./prisma
+
+    # Copy PDF assets (logo) not emitted by the TypeScript build
+    COPY --from=builder /app/src/modules/pdf/image.png ./dist/modules/pdf/image.png
+
+    # All PDF services read LOGO_PATH first, so point it to the copied logo
+    ENV LOGO_PATH=/app/dist/modules/pdf/image.png
     
     # Security (non-root user)
     RUN chown -R node:node /app

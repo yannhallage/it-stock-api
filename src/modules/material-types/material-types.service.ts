@@ -26,7 +26,7 @@ export class MaterialTypesService {
   async listMaterialTypes(filters: MaterialTypeFilterDto) {
     logger.debug({ filters }, '[MaterialTypesService] Listing des types de matériel');
 
-    const where: any = {};
+    const where: any = { deletedAt: null };
 
     if (filters.search) {
       const search = filters.search;
@@ -54,8 +54,8 @@ export class MaterialTypesService {
   async getMaterialTypeById(id: number) {
     logger.debug({ id }, '[MaterialTypesService] Récupération du type de matériel');
 
-    const materialType = await prisma.materialType.findUnique({
-      where: { id },
+    const materialType = await prisma.materialType.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!materialType) {
@@ -68,8 +68,8 @@ export class MaterialTypesService {
   async updateMaterialType(id: number, data: UpdateMaterialTypeDto) {
     logger.info({ id }, '[MaterialTypesService] Mise à jour de type de matériel demandée');
 
-    const existing = await prisma.materialType.findUnique({
-      where: { id },
+    const existing = await prisma.materialType.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
@@ -96,8 +96,8 @@ export class MaterialTypesService {
   async deleteMaterialType(id: number) {
     logger.info({ id }, '[MaterialTypesService] Suppression de type de matériel demandée');
 
-    const existing = await prisma.materialType.findUnique({
-      where: { id },
+    const existing = await prisma.materialType.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
@@ -105,8 +105,9 @@ export class MaterialTypesService {
       return false;
     }
 
-    await prisma.materialType.delete({
+    await prisma.materialType.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
 
     logger.info({ id }, '[MaterialTypesService] Type de matériel supprimé avec succès');
@@ -114,4 +115,3 @@ export class MaterialTypesService {
     return true;
   }
 }
-

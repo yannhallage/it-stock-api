@@ -3,6 +3,7 @@ import { HistoryEventType, AssetStatus, RepairStatus } from '@prisma/client';
 export type RepairInterventionPrintPayload = {
   repair: {
     id: number;
+    assetId: number;
     workshopEntryDate: Date;
     workshopExitDate?: Date | null;
     technicianName: string | null;
@@ -10,20 +11,24 @@ export type RepairInterventionPrintPayload = {
     cost: unknown;
     status: RepairStatus;
     outcome: AssetStatus | null;
+    asset: {
+      inventoryNumber: string;
+      serialNumber: string | null;
+      model: string;
+      status: AssetStatus;
+      category: { id: number; name: string };
+      materialType: { id: number; name: string };
+      brand: { id: number; name: string };
+    };
     incident: {
       id: number;
       reportedAt: Date;
-      department: string;
       description: string;
-      asset: {
-        inventoryNumber: string;
-        serial_number: string | null;
-        type: string;
-        brand: string;
-        model: string;
-        status: AssetStatus;
+      department: {
+        id: number;
+        name: string;
       };
-    };
+    } | null;
   };
   history: Array<{
     type: HistoryEventType;

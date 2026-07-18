@@ -6,7 +6,8 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: 'IT Stock API',
       version: '1.0.0',
-      description: 'API de base pour IT Stock avec module Auth.',
+      description:
+        'API IT Stock: assets normalisés (FK category/brand/materialType/supplier/location), affectations, incidents, atelier, prêts écran, maintenances, pièces jointes, mouvements, référentiels.',
     },
     servers: [
       {

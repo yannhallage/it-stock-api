@@ -19,6 +19,9 @@ export interface SimpleData {
   enStock: number;
   affectes: number;
   reparationsEnCours: number;
+  enPanne: number;
+  garantiesExpirees: number;
+  aRenouveler: number;
 }
 
 export interface RepartitionEtat {
@@ -66,7 +69,19 @@ export class DashboardService {
   async getDashboard(): Promise<DashboardData> {
     logger.debug('[DashboardService] Calcul des indicateurs du tableau de bord');
 
-    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes, materielsParType] =
+    const renewThreshold = new Date();
+    renewThreshold.setFullYear(renewThreshold.getFullYear() - 4);
+    const now = new Date();
+
+    const [
+      totalMateriels,
+      repartitionByStatus,
+      reparationsEnCours,
+      topDirectionsPannes,
+      materielsParMaterialTypeId,
+      garantiesExpirees,
+      aRenouveler,
+    ] =
       await Promise.all([
         prisma.asset.count(),
         prisma.asset.groupBy({
@@ -75,14 +90,46 @@ export class DashboardService {
         }),
         prisma.repair.count({ where: { status: 'EN_COURS' } }),
         prisma.incident.groupBy({
-          by: ['department'],
+          by: ['departmentId'],
           _count: { id: true },
         }),
         prisma.asset.groupBy({
-          by: ['type'],
+          by: ['materialTypeId'],
           _count: { id: true },
         }),
+        prisma.asset.count({
+          where: { warrantyEndDate: { lt: now } },
+        }),
+        prisma.asset.count({
+          where: {
+            OR: [
+              { warrantyEndDate: { lt: now } },
+              { entryDate: { lte: renewThreshold } },
+            ],
+          },
+        }),
       ]);
+
+    const departmentIds = topDirectionsPannes.map((row) => row.departmentId);
+    const materialTypeIds = materielsParMaterialTypeId.map((row) => row.materialTypeId);
+
+    const [departments, materialTypes] = await Promise.all([
+      departmentIds.length > 0
+        ? prisma.department.findMany({
+            where: { id: { in: departmentIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+      materialTypeIds.length > 0
+        ? prisma.materialType.findMany({
+            where: { id: { in: materialTypeIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const departmentNames = new Map(departments.map((d) => [d.id, d.name]));
+    const materialTypeNames = new Map(materialTypes.map((t) => [t.id, t.name]));
 
     const statusCounts = Object.fromEntries(
       repartitionByStatus.map((r) => [r.status, r._count.id]),
@@ -90,12 +137,16 @@ export class DashboardService {
 
     const enStock = statusCounts.EN_STOCK_NON_AFFECTE ?? 0;
     const affectes = statusCounts.AFFECTE ?? 0;
+    const enPanne = statusCounts.EN_PANNE ?? 0;
 
     const simple_data: SimpleData = {
       totalMateriels,
       enStock,
       affectes,
       reparationsEnCours,
+      enPanne,
+      garantiesExpirees,
+      aRenouveler,
     };
 
     const etatsOrdre: AssetStatus[] = [
@@ -116,7 +167,7 @@ export class DashboardService {
 
     const top_directions_pannes: TopDirectionPannes[] = topDirectionsPannes
       .map((r) => ({
-        direction: r.department,
+        direction: departmentNames.get(r.departmentId) ?? `Département #${r.departmentId}`,
         count: r._count.id,
       }))
       .sort((a, b) => b.count - a.count);
@@ -127,8 +178,8 @@ export class DashboardService {
       count: statusCounts[etat] ?? 0,
     }));
 
-    const materiels_par_type: MaterielParType[] = materielsParType.map((r) => ({
-      type: r.type,
+    const materiels_par_type: MaterielParType[] = materielsParMaterialTypeId.map((r) => ({
+      type: materialTypeNames.get(r.materialTypeId) ?? `Type #${r.materialTypeId}`,
       count: r._count.id,
     }));
 

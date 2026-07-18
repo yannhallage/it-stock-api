@@ -3,7 +3,6 @@ import path from 'path';
 import { StockAssetPrintView } from './stock-assets-pdf.types';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const EXPIRY_ALERT_DAYS = 90;
 
 const LOCAL_LOGO_PATH = process.env.LOGO_PATH || path.resolve(process.cwd(), 'src/modules/pdf/image.png');
@@ -53,7 +52,7 @@ export class StockAssetsPdfService {
 
   private buildHtml(data: StockAssetPrintView, metrics: Metrics, logoSrc: string): string {
     const rows = (data.assets.length ? data.assets : [this.emptyRow()])
-      .map((row, index) => this.buildRow(index + 1, row, data.generatedAt))
+      .map((row, index) => this.buildRow(index + 1, row))
       .join('');
     const filters = data.filters
       .map((filter) => `<span class="filter-chip">${this.escapeHtml(filter)}</span>`)
@@ -235,7 +234,6 @@ export class StockAssetsPdfService {
   </div>
 
   <div class="meta">
-    Service: ${this.escapeHtml(SERVICE_NAME)}<br>
     Date: ${this.formatDate(data.generatedAt)}
   </div>
 </div>
@@ -268,7 +266,6 @@ export class StockAssetsPdfService {
 <th>Garantie</th>
 <th>Fournisseur</th>
 <th>Etat</th>
-<th>Remarque</th>
 </tr>
 </thead>
 
@@ -278,7 +275,6 @@ ${rows}
 </table>
 
 <div class="footer">
-  <span>${SERVICE_NAME}</span>
   <span>${this.escapeHtml(data.printedAt)}</span>
 </div>
 
@@ -286,7 +282,7 @@ ${rows}
 </html>`;
   }
 
-  private buildRow(index: number, row: AssetRow, generatedAt: Date): string {
+  private buildRow(index: number, row: AssetRow): string {
     const status = (row.status ?? '').replace(/_/g, ' ');
 
     return `
@@ -296,12 +292,11 @@ ${rows}
 <td>${this.escapeHtml(row.type)}</td>
 <td>${this.escapeHtml(row.brandModel)}</td>
 <td class="center">${this.formatDate(row.entryDateRaw)}</td>
-<td class="center">${this.formatDate(row.warrantyEndDateRaw)}</td>
+<td class="center">${this.escapeHtml(this.formatWarrantyMonths(row.warrantyStartDateRaw, row.warrantyEndDateRaw, row.entryDateRaw))}</td>
 <td>${this.escapeHtml(row.supplier)}</td>
 <td class="center">
   <span class="status ${row.status}">${status}</span>
 </td>
-<td>${this.escapeHtml(this.buildRemark(row, generatedAt))}</td>
 </tr>`;
   }
 
@@ -331,16 +326,33 @@ ${rows}
     };
   }
 
-  private buildRemark(row: AssetRow, now: Date): string {
-    if (row.status === 'EN_REPARATION') return 'En atelier';
-    if (!row.warrantyEndDateRaw) return 'N/A';
+  private formatWarrantyMonths(
+    start: Date | null,
+    end: Date | null,
+    entryFallback: Date | null,
+  ): string {
+    if (!end) return 'N/A';
 
-    const diff = row.warrantyEndDateRaw.getTime() - now.getTime();
+    const effectiveStart = start ?? entryFallback;
+    if (!effectiveStart) return 'N/A';
 
-    if (diff < 0) return 'Expirée';
-    if (diff <= EXPIRY_ALERT_DAYS * 86400000) return 'A renouveler';
+    let months =
+      (end.getFullYear() - effectiveStart.getFullYear()) * 12 +
+      (end.getMonth() - effectiveStart.getMonth());
 
-    return 'RAS';
+    if (end.getDate() < effectiveStart.getDate()) {
+      months -= 1;
+    }
+
+    if (months <= 0) {
+      const days = Math.max(
+        0,
+        Math.round((end.getTime() - effectiveStart.getTime()) / 86400000),
+      );
+      return `${days} jour(s)`;
+    }
+
+    return `${months} mois`;
   }
 
   private async getLogoSrc(): Promise<string> {
@@ -383,6 +395,7 @@ ${rows}
       warrantyStartDate: '-',
       warrantyEndDate: '-',
       entryDateRaw: null,
+      warrantyStartDateRaw: null,
       warrantyEndDateRaw: null,
     };
   }

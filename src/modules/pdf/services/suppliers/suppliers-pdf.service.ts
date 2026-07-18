@@ -3,7 +3,6 @@ import path from 'path';
 import { SupplierPrintView } from './suppliers-pdf.types';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const LOCAL_LOGO_PATH = process.env.LOGO_PATH || path.resolve(process.cwd(), 'src/modules/pdf/image.png');
 
 type SupplierRow = SupplierPrintView['suppliers'][number];
@@ -169,7 +168,6 @@ export class SuppliersPdfService {
   </div>
 
   <div class="meta">
-    Service: ${this.escapeHtml(SERVICE_NAME)}<br>
     Date: ${this.formatDate(data.generatedAt)}
   </div>
 </div>
@@ -188,6 +186,8 @@ export class SuppliersPdfService {
 <th>#</th>
 <th>Nom</th>
 <th>Contact</th>
+<th>Téléphone</th>
+<th>Email</th>
 <th>Adresse</th>
 <th>Date creation</th>
 <th>Archive</th>
@@ -199,7 +199,6 @@ ${rows}
 </table>
 
 <div class="footer">
-  <span>${SERVICE_NAME}</span>
   <span>${this.escapeHtml(data.printedAt)}</span>
 </div>
 
@@ -213,6 +212,8 @@ ${rows}
 <td class="num">${index}</td>
 <td>${this.escapeHtml(row.name)}</td>
 <td>${this.escapeHtml(row.contact)}</td>
+<td>${this.escapeHtml(row.phone)}</td>
+<td>${this.escapeHtml(row.email)}</td>
 <td>${this.escapeHtml(row.address)}</td>
 <td class="center">${this.formatDate(row.createdAtRaw)}</td>
 <td class="center">${this.escapeHtml(row.isArchived)}</td>
@@ -251,6 +252,8 @@ ${rows}
       index: 0,
       name: '-',
       contact: '-',
+      phone: '-',
+      email: '-',
       address: '-',
       createdAt: '-',
       createdAtRaw: null,

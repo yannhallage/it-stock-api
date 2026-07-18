@@ -2,7 +2,6 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const LOGO_PATHS = [
   process.env.LOGO_PATH,
   path.resolve(process.cwd(), 'src/modules/pdf/image.png'),
@@ -12,20 +11,23 @@ const LOGO_PATHS = [
 type ScreenLoanPrintItem = {
   id: number;
   assetId: number;
-  borrowerName: string;
-  borrowerDepartment: string | null;
+  borrowerFirstName: string;
+  borrowerLastName: string;
   loanDate: Date;
   expectedReturnDate: Date;
   returnedAt: Date | null;
   note: string | null;
   createdAt: Date;
+  department: { id: number; name: string } | null;
   asset: {
     id: number;
     inventoryNumber: string;
-    type: string;
-    brand: string;
+    serialNumber: string | null;
     model: string;
     status: string;
+    category: { id: number; name: string };
+    materialType: { id: number; name: string };
+    brand: { id: number; name: string };
   };
 };
 
@@ -254,7 +256,6 @@ export class ScreenLoansPdfService {
   </table>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>${this.escapeHtml(this.formatDateTime(generatedAt))}</span>
   </div>
 </body>
@@ -441,8 +442,8 @@ export class ScreenLoansPdfService {
     <div class="grid">
       ${this.infoCell('Identifiant emprunt', String(loan.id))}
       ${this.infoCell('Etat emprunt', this.statusBadge(status), true)}
-      ${this.infoCell('Emprunteur', loan.borrowerName)}
-      ${this.infoCell('Direction', loan.borrowerDepartment ?? 'N/A')}
+      ${this.infoCell('Emprunteur', this.borrowerFullName(loan))}
+      ${this.infoCell('Direction', loan.department?.name ?? 'N/A')}
       ${this.infoCell('Date pret', this.formatDateTime(loan.loanDate))}
       ${this.infoCell('Retour prevu', this.formatDateTime(loan.expectedReturnDate))}
       ${this.infoCell('Retour effectif', this.formatDateTime(loan.returnedAt))}
@@ -454,8 +455,8 @@ export class ScreenLoansPdfService {
     <div class="section-title">Materiel emprunte</div>
     <div class="grid">
       ${this.infoCell("Numero d'inventaire", loan.asset.inventoryNumber)}
-      ${this.infoCell('Type', loan.asset.type)}
-      ${this.infoCell('Marque / Modele', `${loan.asset.brand} / ${loan.asset.model}`)}
+      ${this.infoCell('Type', loan.asset.materialType.name)}
+      ${this.infoCell('Marque / Modele', `${loan.asset.brand.name} / ${loan.asset.model}`)}
       ${this.infoCell('Statut actuel du materiel', loan.asset.status.replace(/_/g, ' '))}
     </div>
   </div>
@@ -477,7 +478,6 @@ export class ScreenLoansPdfService {
   </div>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>EMP-${loan.id}</span>
   </div>
 </body>
@@ -501,7 +501,6 @@ export class ScreenLoansPdfService {
     </div>
   </div>
   <div class="meta">
-    Service: ${this.escapeHtml(SERVICE_NAME)}<br>
     Date: ${this.escapeHtml(this.formatDate(generatedAt))}
   </div>
 </div>`;
@@ -521,9 +520,9 @@ export class ScreenLoansPdfService {
   <td class="num">${index}</td>
   <td class="num">${loan.id > 0 ? loan.id : '-'}</td>
   <td>${this.escapeHtml(loan.asset.inventoryNumber)}</td>
-  <td>${this.escapeHtml(`${loan.asset.type} - ${loan.asset.brand} ${loan.asset.model}`)}</td>
-  <td>${this.escapeHtml(loan.borrowerName)}</td>
-  <td>${this.escapeHtml(loan.borrowerDepartment ?? 'N/A')}</td>
+  <td>${this.escapeHtml(`${loan.asset.materialType.name} - ${loan.asset.brand.name} ${loan.asset.model}`)}</td>
+  <td>${this.escapeHtml(this.borrowerFullName(loan))}</td>
+  <td>${this.escapeHtml(loan.department?.name ?? 'N/A')}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.loanDate)) : '-'}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.expectedReturnDate)) : '-'}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.returnedAt)) : '-'}</td>
@@ -540,13 +539,22 @@ export class ScreenLoansPdfService {
 </div>`;
   }
 
+  private borrowerFullName(loan: ScreenLoanPrintItem): string {
+    return [loan.borrowerFirstName, loan.borrowerLastName]
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean)
+      .join(' ');
+  }
+
   private computeMetrics(loans: ScreenLoanPrintItem[], now: Date): Metrics {
     const returned = loans.filter((loan) => loan.returnedAt != null).length;
     const active = loans.filter((loan) => loan.returnedAt == null).length;
     const overdue = loans.filter(
       (loan) => loan.returnedAt == null && loan.expectedReturnDate.getTime() < now.getTime(),
     ).length;
-    const borrowers = new Set(loans.map((loan) => loan.borrowerName).filter(Boolean)).size;
+    const borrowers = new Set(
+      loans.map((loan) => this.borrowerFullName(loan)).filter(Boolean),
+    ).size;
 
     return {
       total: loans.length,
@@ -626,20 +634,23 @@ export class ScreenLoansPdfService {
     return {
       id: 0,
       assetId: 0,
-      borrowerName: '-',
-      borrowerDepartment: '-',
+      borrowerFirstName: '',
+      borrowerLastName: '-',
       loanDate: new Date(0),
       expectedReturnDate: new Date(0),
       returnedAt: null,
       note: 'Aucun emprunt enregistre.',
       createdAt: new Date(0),
+      department: null,
       asset: {
         id: 0,
         inventoryNumber: '-',
-        type: '-',
-        brand: '-',
+        serialNumber: null,
         model: '-',
         status: '-',
+        category: { id: 0, name: '-' },
+        materialType: { id: 0, name: '-' },
+        brand: { id: 0, name: '-' },
       },
     };
   }

@@ -1,7 +1,8 @@
 export interface CreateAssignmentDto {
-  department: string;
-  user: any;
+  userId: string;
+  departmentId: number;
   startDate: Date;
+  note?: string;
 }
 
 export const validateCreateAssignmentDto = (
@@ -9,16 +10,25 @@ export const validateCreateAssignmentDto = (
 ): { value?: CreateAssignmentDto; errors?: string[] } => {
   const errors: string[] = [];
 
-  if (typeof body.department !== 'string' || body.department.trim().length === 0) {
-    errors.push('La direction (department) est requise et ne doit pas être vide.');
+  if (typeof body.userId !== 'string' || body.userId.trim().length === 0) {
+    errors.push("L'identifiant utilisateur (userId) est requis et ne doit pas être vide.");
   }
 
-  if (body.user == null || typeof body.user !== 'object' || Array.isArray(body.user)) {
-    errors.push("L'utilisateur (user) doit être un objet JSON.");
+  if (body.departmentId == null) {
+    errors.push('Le département (departmentId) est requis.');
+  } else {
+    const parsed = parseInt(String(body.departmentId), 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      errors.push('Le département (departmentId) doit être un entier strictement positif.');
+    }
   }
 
   if (typeof body.startDate !== 'string') {
     errors.push('La date de début (startDate) est requise et doit être une chaîne ISO (YYYY-MM-DD).');
+  }
+
+  if (body.note != null && typeof body.note !== 'string') {
+    errors.push('La note doit être une chaîne de caractères.');
   }
 
   let parsedDate: Date | null = null;
@@ -34,11 +44,14 @@ export const validateCreateAssignmentDto = (
   }
 
   const value: CreateAssignmentDto = {
-    department: body.department.trim(),
-    user: body.user,
+    userId: body.userId.trim(),
+    departmentId: parseInt(String(body.departmentId), 10),
     startDate: parsedDate!,
+    note:
+      typeof body.note === 'string' && body.note.trim().length > 0
+        ? body.note.trim()
+        : undefined,
   };
 
   return { value };
 };
-

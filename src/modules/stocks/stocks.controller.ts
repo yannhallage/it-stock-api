@@ -135,6 +135,61 @@ export class StocksController {
 
   /**
    * @swagger
+   * /api/assets/inventory-summary:
+   *   get:
+   *     summary: Synthèse du parc (totaux par état)
+   *     tags: [Assets]
+   *     responses:
+   *       200:
+   *         description: Synthèse inventaire
+   */
+  inventorySummary = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { value, errors } = validateAssetFilterDto(req.query);
+
+      if (errors) {
+        return res.status(400).json({ errors });
+      }
+
+      const summary = await stocksService.getInventorySummary(value);
+      return res.status(200).json(summary);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/assets/{id}/physical-inventory:
+   *   post:
+   *     summary: Marque un matériel comme inventorié physiquement
+   *     tags: [Assets]
+   */
+  markPhysicalInventory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "L'identifiant doit être un entier valide." });
+      }
+
+      const note =
+        typeof req.body?.note === 'string' && req.body.note.trim().length > 0
+          ? req.body.note.trim()
+          : null;
+
+      const asset = await stocksService.markPhysicalInventory(id, { note });
+      if (!asset) {
+        return res.status(404).json({ message: 'Matériel non trouvé.' });
+      }
+
+      return res.status(200).json(asset);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/assets/{id}:
    *   get:
    *     summary: Récupère le détail d'un matériel

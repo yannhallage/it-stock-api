@@ -1,6 +1,8 @@
 export interface UpdateSupplierDto {
   name?: string;
   contact?: string;
+  email?: string;
+  phone?: string;
   address?: string;
 }
 
@@ -27,6 +29,26 @@ export const validateUpdateSupplierDto = (body: any): { value?: UpdateSupplierDt
     }
   }
 
+  if (body.email !== undefined) {
+    if (typeof body.email !== 'string') {
+      errors.push("L'email doit être une chaîne de caractères.");
+    } else if (body.email.trim().length > 0) {
+      value.email = body.email.trim();
+    } else {
+      value.email = undefined;
+    }
+  }
+
+  if (body.phone !== undefined) {
+    if (typeof body.phone !== 'string') {
+      errors.push('Le téléphone doit être une chaîne de caractères.');
+    } else if (body.phone.trim().length > 0) {
+      value.phone = body.phone.trim();
+    } else {
+      value.phone = undefined;
+    }
+  }
+
   if (body.address !== undefined) {
     if (typeof body.address !== 'string') {
       errors.push("L'adresse doit être une chaîne de caractères.");
@@ -43,4 +65,3 @@ export const validateUpdateSupplierDto = (body: any): { value?: UpdateSupplierDt
 
   return { value };
 };
-

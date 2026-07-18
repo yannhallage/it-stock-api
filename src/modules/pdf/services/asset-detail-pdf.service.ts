@@ -2,7 +2,6 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { launchPdfBrowser } from './shared/pdf-browser';
 
-const SERVICE_NAME = 'CST DID';
 const EXPIRY_ALERT_DAYS = 90;
 const LOGO_PATHS = [
   process.env.LOGO_PATH,
@@ -13,22 +12,24 @@ const LOGO_PATHS = [
 type AssetDetailPdfPayload = {
   id: number;
   inventoryNumber: string;
-  serial_number: string | null;
-  type: string;
-  brand: string;
+  serialNumber: string | null;
   model: string;
   entryDate: Date;
-  supplier: string;
   warrantyStartDate: Date | null;
   warrantyEndDate: Date | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  category: { id: number; name: string };
+  materialType: { id: number; name: string };
+  brand: { id: number; name: string };
+  supplier: { id: number; name: string } | null;
+  location: { id: number; name: string } | null;
   currentStatus?: string;
   currentAssignment: {
     id: number;
-    department: string;
-    user: unknown;
+    department: { id: number; name: string };
+    user: { firstName: string; lastName: string; email: string };
     startDate: Date;
     endDate: Date | null;
     createdAt: Date;
@@ -43,7 +44,7 @@ type AssetDetailPdfPayload = {
     id: number;
     description: string;
     reportedAt: Date;
-    department: string;
+    department: { id: number; name: string };
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -282,10 +283,10 @@ export class AssetDetailPdfService {
     <div class="section-title">Identification du materiel</div>
     <div class="grid">
       ${this.infoCell("Numero d'inventaire", asset.inventoryNumber)}
-      ${this.infoCell('Numero de serie', asset.serial_number ?? 'N/A')}
-      ${this.infoCell('Type', asset.type)}
-      ${this.infoCell('Marque / Modele', `${asset.brand} / ${asset.model}`)}
-      ${this.infoCell('Fournisseur', asset.supplier)}
+      ${this.infoCell('Numero de serie', asset.serialNumber ?? 'N/A')}
+      ${this.infoCell('Type', asset.materialType.name)}
+      ${this.infoCell('Marque / Modele', `${asset.brand.name} / ${asset.model}`)}
+      ${this.infoCell('Fournisseur', asset.supplier?.name ?? 'N/A')}
       ${this.infoCell('Date entree stock', this.formatDate(asset.entryDate))}
       ${this.infoCell('Statut actuel', this.statusBadge(asset.currentStatus ?? asset.status), true)}
       ${this.infoCell('Cree le', this.formatDateTime(asset.createdAt))}
@@ -295,8 +296,7 @@ export class AssetDetailPdfService {
   <div class="section">
     <div class="section-title">Garantie</div>
     <div class="grid">
-      ${this.infoCell('Debut garantie', this.formatDate(asset.warrantyStartDate))}
-      ${this.infoCell('Fin garantie', this.formatDate(asset.warrantyEndDate))}
+      ${this.infoCell('Duree garantie', this.formatWarrantyMonths(asset.warrantyStartDate, asset.warrantyEndDate, asset.entryDate))}
       ${this.infoCell('Etat garantie', warranty.status)}
       ${this.infoCell('Observation', warranty.note)}
     </div>
@@ -352,7 +352,6 @@ export class AssetDetailPdfService {
   </div>
 
   <div class="footer">
-    <span>${SERVICE_NAME}</span>
     <span>${this.escapeHtml(asset.inventoryNumber)}</span>
   </div>
 </body>
@@ -382,12 +381,13 @@ export class AssetDetailPdfService {
       };
     }
 
-    const user = this.parseUser(asset.currentAssignment.user);
+    const { user, department } = asset.currentAssignment;
+    const fullName = `${user.firstName} ${user.lastName}`.trim();
 
     return {
-      name: user.name,
-      role: user.role,
-      service: user.service === 'N/A' ? asset.currentAssignment.department : user.service,
+      name: fullName || user.email,
+      role: 'N/A',
+      service: department.name,
       assignedAt: this.formatDateTime(asset.currentAssignment.startDate),
     };
   }
@@ -441,7 +441,7 @@ export class AssetDetailPdfService {
         return `
 <tr>
   <td>${this.escapeHtml(this.formatDateTime(incident.reportedAt))}</td>
-  <td>${this.escapeHtml(incident.department)}</td>
+  <td>${this.escapeHtml(incident.department.name)}</td>
   <td>${this.statusBadge(incident.status)}</td>
   <td>${this.escapeHtml(incident.description)}</td>
   <td>${this.buildRepairSummary(latestRepair)}</td>
@@ -499,20 +499,20 @@ export class AssetDetailPdfService {
     }
 
     if (type === 'ASSIGNMENT_CREATED') {
-      const user = this.parseUser(data);
-      const department = this.readString(data, 'department') ?? user.service;
-      return `Affectation: ${user.name} / ${department}`;
+      const userId = this.readString(data, 'userId') ?? 'N/A';
+      const departmentId = this.readString(data, 'departmentId') ?? 'N/A';
+      return `Affectation: utilisateur ${userId} / departement ${departmentId}`;
     }
 
     if (type === 'ASSIGNMENT_ENDED') {
-      const user = this.parseUser(data);
-      return `Fin affectation: ${user.name}`;
+      const userId = this.readString(data, 'userId') ?? 'N/A';
+      return `Fin affectation: utilisateur ${userId}`;
     }
 
     if (type === 'INCIDENT_REPORTED') {
-      const department = this.readString(data, 'department') ?? 'N/A';
+      const departmentId = this.readString(data, 'departmentId') ?? 'N/A';
       const description = this.readString(data, 'description') ?? 'N/A';
-      return `${department} - ${description}`;
+      return `Departement ${departmentId} - ${description}`;
     }
 
     if (type === 'REPAIR_STARTED') {
@@ -627,6 +627,35 @@ export class AssetDetailPdfService {
       currency: 'XOF',
       maximumFractionDigits: 0,
     }).format(candidate);
+  }
+
+  private formatWarrantyMonths(
+    start: Date | null,
+    end: Date | null,
+    entryFallback: Date | null,
+  ): string {
+    if (!end) return 'N/A';
+
+    const effectiveStart = start ?? entryFallback;
+    if (!effectiveStart) return 'N/A';
+
+    let months =
+      (end.getFullYear() - effectiveStart.getFullYear()) * 12 +
+      (end.getMonth() - effectiveStart.getMonth());
+
+    if (end.getDate() < effectiveStart.getDate()) {
+      months -= 1;
+    }
+
+    if (months <= 0) {
+      const days = Math.max(
+        0,
+        Math.round((end.getTime() - effectiveStart.getTime()) / 86400000),
+      );
+      return `${days} jour(s)`;
+    }
+
+    return `${months} mois`;
   }
 
   private formatDate(date?: Date | null): string {

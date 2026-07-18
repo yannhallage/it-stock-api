@@ -4,12 +4,19 @@ import { AssetStatus, HistoryEventType, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { AssignmentFilterDto } from './dto/filter-assignments.dto';
+import { assetSelect } from '../../prisma/asset-select';
+
+const assignmentInclude = {
+  user: { select: { id: true, firstName: true, lastName: true, email: true } },
+  department: { select: { id: true, name: true } },
+  asset: { select: assetSelect },
+} as const;
 
 export class AssignmentsService {
   async listAssignments(params: AssignmentFilterDto) {
     const { assetId, activeOnly } = params;
 
-    const where: any = {};
+    const where: Prisma.AssignmentWhereInput = {};
 
     if (typeof assetId === 'number') {
       where.assetId = assetId;
@@ -26,6 +33,7 @@ export class AssignmentsService {
 
     const assignments = await prisma.assignment.findMany({
       where,
+      include: assignmentInclude,
       orderBy: {
         createdAt: 'desc',
       },
@@ -41,7 +49,7 @@ export class AssignmentsService {
 
   async createAssignment(assetId: number, data: CreateAssignmentDto) {
     logger.info(
-      // { assetId, department: data.department },
+      { assetId, userId: data.userId, departmentId: data.departmentId },
       '[AssignmentsService] Création dune affectation demandée',
     );
 
@@ -63,7 +71,7 @@ export class AssignmentsService {
           asset.status === AssetStatus.HORS_SERVICE
         ) {
           logger.warn(
-            // { assetId, status: asset.status },
+            { assetId, status: asset.status },
             "[AssignmentsService] Matériel non assignable en raison de son statut",
           );
           throw new HttpError(
@@ -73,7 +81,6 @@ export class AssignmentsService {
           );
         }
 
-        // Vérifier que le matériel n'est pas déjà affecté
         const activeAssignment = await tx.assignment.findFirst({
           where: {
             assetId,
@@ -89,16 +96,16 @@ export class AssignmentsService {
           throw new HttpError(
             400,
             'Ce matériel est déjà affecté. Veuillez clôturer l\'affectation en cours avant d\'en créer une nouvelle.',
-            // 'ASSET_ALREADY_ASSIGNED',
           );
         }
 
         const assignment = await tx.assignment.create({
           data: {
             assetId,
-            department: data.department,
-            user: data.user,
+            userId: data.userId,
+            departmentId: data.departmentId,
             startDate: data.startDate,
+            note: data.note,
           },
         });
 
@@ -111,23 +118,22 @@ export class AssignmentsService {
           },
         });
 
-        // Historique : création de l'affectation
         const eventCreated = await tx.historyEvent.create({
           data: {
             assetId,
             type: HistoryEventType.ASSIGNMENT_CREATED,
             payload: {
               assignmentId: assignment.id,
-              department: assignment.department,
-              user: assignment.user,
+              userId: assignment.userId,
+              departmentId: assignment.departmentId,
               startDate: assignment.startDate.toISOString?.() ?? assignment.startDate,
+              note: assignment.note,
             },
           },
         });
 
         const historyEvents = [eventCreated];
 
-        // Historique : changement de statut si nécessaire
         if (previousStatus !== updatedAsset.status) {
           const eventStatus = await tx.historyEvent.create({
             data: {
@@ -142,7 +148,12 @@ export class AssignmentsService {
           historyEvents.push(eventStatus);
         }
 
-        return { assignment, historyEvents };
+        const assignmentWithRelations = await tx.assignment.findUnique({
+          where: { id: assignment.id },
+          include: assignmentInclude,
+        });
+
+        return { assignment: assignmentWithRelations!, historyEvents };
       });
 
       if (!result) {
@@ -152,7 +163,7 @@ export class AssignmentsService {
       const { assignment, historyEvents } = result;
 
       logger.info(
-        // { assignmentId: assignment.id, assetId },
+        { assignmentId: assignment.id, assetId },
         '[AssignmentsService] Affectation créée avec succès',
       );
 
@@ -160,7 +171,7 @@ export class AssignmentsService {
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
         logger.warn(
-          // { assetId, error },
+          { assetId, error },
           '[AssignmentsService] Données invalides lors de la création de laffectation',
         );
 
@@ -171,12 +182,21 @@ export class AssignmentsService {
         );
       }
 
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        logger.warn({ assetId, error }, '[AssignmentsService] Référence invalide lors de la création');
+        throw new HttpError(
+          400,
+          "L'utilisateur ou le département fourni est invalide.",
+          'ASSIGNMENT_REFERENCE_ERROR',
+        );
+      }
+
       if (error instanceof HttpError) {
         throw error;
       }
 
       logger.error(
-        // { error, assetId },
+        { error, assetId },
         '[AssignmentsService] Erreur inattendue lors de la création de laffectation',
       );
 
@@ -189,19 +209,7 @@ export class AssignmentsService {
 
     const assignments = await prisma.assignment.findMany({
       orderBy: [{ assetId: 'asc' }, { startDate: 'asc' }],
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            serial_number: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: assignmentInclude,
     });
 
     logger.debug(
@@ -220,19 +228,7 @@ export class AssignmentsService {
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            serial_number: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: assignmentInclude,
     });
 
     if (!assignment) {
@@ -297,15 +293,14 @@ export class AssignmentsService {
           },
         });
 
-        // Historique : fin de l'affectation
         const eventEnded = await tx.historyEvent.create({
           data: {
             assetId: assignment.assetId,
             type: HistoryEventType.ASSIGNMENT_ENDED,
             payload: {
               assignmentId: assignment.id,
-              department: assignment.department,
-              user: assignment.user,
+              userId: assignment.userId,
+              departmentId: assignment.departmentId,
               startDate: assignment.startDate.toISOString?.() ?? assignment.startDate,
               endDate: endedAt.toISOString(),
             },
@@ -314,7 +309,6 @@ export class AssignmentsService {
 
         const historyEvents = [eventEnded];
 
-        // Historique : changement de statut si nécessaire
         if (previousStatus !== updatedAsset.status) {
           const eventStatus = await tx.historyEvent.create({
             data: {
@@ -329,7 +323,12 @@ export class AssignmentsService {
           historyEvents.push(eventStatus);
         }
 
-        return { assignment: updatedAssignment, historyEvents };
+        const assignmentWithRelations = await tx.assignment.findUnique({
+          where: { id: updatedAssignment.id },
+          include: assignmentInclude,
+        });
+
+        return { assignment: assignmentWithRelations!, historyEvents };
       });
 
       if (!result) {
@@ -371,4 +370,3 @@ export class AssignmentsService {
     }
   }
 }
-

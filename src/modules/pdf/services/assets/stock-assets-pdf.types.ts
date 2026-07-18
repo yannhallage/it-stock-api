@@ -1,19 +1,27 @@
 import { AssetStatus } from '@prisma/client';
 
-export type StockAssetPrintPayload = Array<{
-  id: number;
-  inventoryNumber: string;
-  serial_number: string | null;
-  type: string;
-  brand: string;
-  model: string;
-  supplier: string;
-  status: AssetStatus;
-  entryDate: Date;
-  warrantyStartDate: Date | null;
-  warrantyEndDate: Date | null;
-  createdAt: Date;
-}>;
+type AssetRelationNames = {
+  category: { id: number; name: string };
+  materialType: { id: number; name: string };
+  brand: { id: number; name: string };
+  supplier: { id: number; name: string } | null;
+  location: { id: number; name: string } | null;
+};
+
+export type StockAssetPrintPayload = Array<
+  {
+    id: number;
+    inventoryNumber: string;
+    serialNumber: string | null;
+    model: string;
+    status: AssetStatus;
+    entryDate: Date;
+    purchasePrice: unknown;
+    warrantyStartDate: Date | null;
+    warrantyEndDate: Date | null;
+    createdAt: Date;
+  } & AssetRelationNames
+>;
 
 export type StockAssetPrintView = {
   organizationName: string;
@@ -34,6 +42,7 @@ export type StockAssetPrintView = {
     warrantyStartDate: string;
     warrantyEndDate: string;
     entryDateRaw: Date | null;
+    warrantyStartDateRaw: Date | null;
     warrantyEndDateRaw: Date | null;
   }>;
 };

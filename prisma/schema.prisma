@@ -7,66 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Asset {
-  id              Int          @id @default(autoincrement())
-  inventoryNumber String       @unique
-  serial_number   String?
-  type            String
-  brand           String
-  model           String
-  entryDate         DateTime
-  supplier          String
-  warrantyStartDate DateTime?
-  warrantyEndDate   DateTime?
-  status            AssetStatus  @default(EN_STOCK_NON_AFFECTE)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  // relations
-  assignments     Assignment[]
-  history         HistoryEvent[]
-  incidents       Incident[]
-  screenLoans     ScreenLoan[]
-}
-
-model Assignment {
-  id         Int      @id @default(autoincrement())
-  assetId    Int
-  asset      Asset    @relation(fields: [assetId], references: [id])
-  department String
-  user       Json
-  startDate  DateTime
-  endDate    DateTime?
-  createdAt  DateTime @default(now())
-
-  @@index([assetId])
-}
-
-model Supplier {
-  id         Int      @id @default(autoincrement())
-  name       String
-  contact    String?
-  address    String?
-  createdAt  DateTime @default(now())
-  deletedAt  DateTime?
-}
-
-model MaterialType {
-  id          Int     @id @default(autoincrement())
-  name        String
-  description String?
-  createdAt  DateTime @default(now())
-  deletedAt  DateTime?
-}
+/////////////////////////////////////////////////////
+// ENUMS
+/////////////////////////////////////////////////////
 
 enum AssetStatus {
   EN_STOCK_NON_AFFECTE
@@ -88,6 +31,27 @@ enum RepairStatus {
   TERMINE
 }
 
+enum MaintenanceStatus {
+  PLANIFIEE
+  EN_COURS
+  TERMINEE
+  ANNULEE
+}
+
+enum MovementType {
+  ENTREE
+  SORTIE
+  TRANSFERT
+}
+
+enum AttachmentType {
+  PHOTO
+  FACTURE
+  GARANTIE
+  MANUEL
+  AUTRE
+}
+
 enum HistoryEventType {
   ASSET_CREATED
   STATUS_CHANGED
@@ -96,67 +60,386 @@ enum HistoryEventType {
   INCIDENT_REPORTED
   REPAIR_STARTED
   REPAIR_FINISHED
+  MAINTENANCE_CREATED
+  LOCATION_CHANGED
 }
 
-model HistoryEvent {
-  id        Int              @id @default(autoincrement())
-  assetId   Int
-  asset     Asset            @relation(fields: [assetId], references: [id])
-  type      HistoryEventType
-  payload   Json
-  createdAt DateTime         @default(now())
+/////////////////////////////////////////////////////
+// USERS
+/////////////////////////////////////////////////////
+
+model User {
+  id        String @id @default(cuid())
+  email     String @unique
+  password  String
+  firstName String
+  lastName  String
+
+  assignments Assignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/////////////////////////////////////////////////////
+// DEPARTMENT
+/////////////////////////////////////////////////////
+
+model Department {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  assignments Assignment[]
+  incidents   Incident[]
+  screenLoans ScreenLoan[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// LOCATION
+/////////////////////////////////////////////////////
+
+model Location {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  building String?
+  floor    String?
+  room     String?
+
+  assets         Asset[]
+  movementsFrom  AssetMovement[] @relation("FromLocation")
+  movementsTo    AssetMovement[] @relation("ToLocation")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// SUPPLIER
+/////////////////////////////////////////////////////
+
+model Supplier {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique
+  contact String?
+  email   String?
+  phone   String?
+  address String?
+
+  assets Asset[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// CATEGORY
+/////////////////////////////////////////////////////
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  assets Asset[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// MATERIAL TYPE
+/////////////////////////////////////////////////////
+
+model MaterialType {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  assets Asset[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// BRAND
+/////////////////////////////////////////////////////
+
+model Brand {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  assets Asset[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+/////////////////////////////////////////////////////
+// ASSET
+/////////////////////////////////////////////////////
+
+model Asset {
+  id              Int     @id @default(autoincrement())
+  inventoryNumber String  @unique
+  serialNumber    String? @unique
+  model           String
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  materialTypeId Int
+  materialType   MaterialType @relation(fields: [materialTypeId], references: [id])
+
+  brandId Int
+  brand   Brand @relation(fields: [brandId], references: [id])
+
+  supplierId Int?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  locationId Int?
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  entryDate DateTime
+
+  purchasePrice Decimal? @db.Decimal(10, 2)
+
+  warrantyStartDate DateTime?
+  warrantyEndDate   DateTime?
+
+  status AssetStatus @default(EN_STOCK_NON_AFFECTE)
+
+  lastPhysicalInventoryAt DateTime?
+  physicalInventoryNote   String?
+
+  assignments  Assignment[]
+  incidents    Incident[]
+  repairs      Repair[]
+  maintenances Maintenance[]
+  history      HistoryEvent[]
+  attachments  Attachment[]
+  movements    AssetMovement[]
+  screenLoans  ScreenLoan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([materialTypeId])
+  @@index([supplierId])
+  @@index([locationId])
+  @@index([lastPhysicalInventoryAt])
+}
+
+/////////////////////////////////////////////////////
+// ASSIGNMENT
+/////////////////////////////////////////////////////
+
+model Assignment {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  startDate DateTime
+  endDate   DateTime?
+  note      String?
+
+  createdAt DateTime @default(now())
 
   @@index([assetId])
-  @@index([type])
+  @@index([userId])
+  @@index([departmentId])
 }
 
+/////////////////////////////////////////////////////
+// INCIDENT
+/////////////////////////////////////////////////////
+
 model Incident {
-  id          Int            @id @default(autoincrement())
-  assetId     Int
-  asset       Asset          @relation(fields: [assetId], references: [id])
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
   description String
   reportedAt  DateTime
-  department  String
   status      IncidentStatus @default(OUVERT)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
 
-  repairs     Repair[]
+  repairs Repair[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([assetId])
   @@index([status])
 }
 
-model Repair {
-  id                 Int           @id @default(autoincrement())
-  incidentId         Int
-  incident           Incident      @relation(fields: [incidentId], references: [id])
-  technicianName     String?
-  workshopEntryDate  DateTime
-  workshopExitDate   DateTime?
-  action             String?
-  cost               Decimal?      @db.Decimal(10, 2)
-  status             RepairStatus  @default(EN_COURS)
-  outcome            AssetStatus?  // EN_SERVICE ou HORS_SERVICE à la clôture
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+/////////////////////////////////////////////////////
+// REPAIR
+/////////////////////////////////////////////////////
 
+model Repair {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  incidentId Int?
+  incident   Incident? @relation(fields: [incidentId], references: [id])
+
+  technicianName String?
+
+  workshopEntryDate DateTime
+  workshopExitDate  DateTime?
+
+  action String?
+  cost   Decimal? @db.Decimal(10, 2)
+
+  status  RepairStatus @default(EN_COURS)
+  outcome AssetStatus?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assetId])
   @@index([incidentId])
   @@index([status])
 }
 
+/////////////////////////////////////////////////////
+// MAINTENANCE
+/////////////////////////////////////////////////////
+
+model Maintenance {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  title       String
+  description String?
+
+  scheduledDate DateTime
+  completedDate DateTime?
+
+  technician String?
+  cost       Decimal? @db.Decimal(10, 2)
+
+  status MaintenanceStatus @default(PLANIFIEE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assetId])
+  @@index([status])
+}
+
+/////////////////////////////////////////////////////
+// SCREEN LOAN
+/////////////////////////////////////////////////////
+
 model ScreenLoan {
-  id                 Int      @id @default(autoincrement())
-  assetId            Int
-  asset              Asset    @relation(fields: [assetId], references: [id])
-  borrowerName       String
-  borrowerDepartment String?
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  borrowerFirstName String
+  borrowerLastName  String
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
   loanDate           DateTime
   expectedReturnDate DateTime
   returnedAt         DateTime?
   note               String?
-  createdAt          DateTime @default(now())
+
+  createdAt DateTime @default(now())
 
   @@index([assetId])
   @@index([returnedAt])
+}
+
+/////////////////////////////////////////////////////
+// ATTACHMENT
+/////////////////////////////////////////////////////
+
+model Attachment {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  type     AttachmentType
+  fileName String
+  filePath String
+
+  uploadedAt DateTime @default(now())
+
+  @@index([assetId])
+}
+
+/////////////////////////////////////////////////////
+// MOVEMENT
+/////////////////////////////////////////////////////
+
+model AssetMovement {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  fromLocationId Int?
+  fromLocation   Location? @relation("FromLocation", fields: [fromLocationId], references: [id])
+
+  toLocationId Int?
+  toLocation   Location? @relation("ToLocation", fields: [toLocationId], references: [id])
+
+  movementType MovementType
+  movedAt      DateTime
+  note         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+}
+
+/////////////////////////////////////////////////////
+// HISTORY
+/////////////////////////////////////////////////////
+
+model HistoryEvent {
+  id Int @id @default(autoincrement())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  type    HistoryEventType
+  payload Json
+
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+  @@index([type])
 }

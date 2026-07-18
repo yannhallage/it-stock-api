@@ -2,13 +2,13 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-// hdhdhdhdhdh
 const prisma = new PrismaClient();
 
 async function main() {
   const email = process.env.SEED_USER_EMAIL || 'admin@assnat.ci';
   const password = process.env.SEED_USER_PASSWORD || 'Admin@1234';
-  const name = process.env.SEED_USER_NAME || 'Admin';
+  const firstName = process.env.SEED_USER_FIRST_NAME || 'Admin';
+  const lastName = process.env.SEED_USER_LAST_NAME || 'ASSNAT';
 
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -24,7 +24,8 @@ async function main() {
   const user = await prisma.user.create({
     data: {
       email,
-      name,
+      firstName,
+      lastName,
       password: hashedPassword,
     },
   });
@@ -32,7 +33,8 @@ async function main() {
   console.log('Utilisateur seed créé :', {
     id: user.id,
     email: user.email,
-    name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
   });
 }
 
@@ -44,4 +46,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
