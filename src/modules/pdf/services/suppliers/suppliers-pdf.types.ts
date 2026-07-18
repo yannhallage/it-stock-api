@@ -2,6 +2,8 @@ export type SupplierPrintPayload = Array<{
   id: number;
   name: string;
   contact: string | null;
+  email: string | null;
+  phone: string | null;
   address: string | null;
   createdAt: Date;
   deletedAt: Date | null;
@@ -17,6 +19,8 @@ export type SupplierPrintView = {
     index: number;
     name: string;
     contact: string;
+    phone: string;
+    email: string;
     address: string;
     createdAt: string;
     createdAtRaw: Date | null;

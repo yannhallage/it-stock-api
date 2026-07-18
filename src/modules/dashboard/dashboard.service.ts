@@ -19,6 +19,9 @@ export interface SimpleData {
   enStock: number;
   affectes: number;
   reparationsEnCours: number;
+  enPanne: number;
+  garantiesExpirees: number;
+  aRenouveler: number;
 }
 
 export interface RepartitionEtat {
@@ -66,7 +69,19 @@ export class DashboardService {
   async getDashboard(): Promise<DashboardData> {
     logger.debug('[DashboardService] Calcul des indicateurs du tableau de bord');
 
-    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes, materielsParMaterialTypeId] =
+    const renewThreshold = new Date();
+    renewThreshold.setFullYear(renewThreshold.getFullYear() - 4);
+    const now = new Date();
+
+    const [
+      totalMateriels,
+      repartitionByStatus,
+      reparationsEnCours,
+      topDirectionsPannes,
+      materielsParMaterialTypeId,
+      garantiesExpirees,
+      aRenouveler,
+    ] =
       await Promise.all([
         prisma.asset.count(),
         prisma.asset.groupBy({
@@ -81,6 +96,17 @@ export class DashboardService {
         prisma.asset.groupBy({
           by: ['materialTypeId'],
           _count: { id: true },
+        }),
+        prisma.asset.count({
+          where: { warrantyEndDate: { lt: now } },
+        }),
+        prisma.asset.count({
+          where: {
+            OR: [
+              { warrantyEndDate: { lt: now } },
+              { entryDate: { lte: renewThreshold } },
+            ],
+          },
         }),
       ]);
 
@@ -111,12 +137,16 @@ export class DashboardService {
 
     const enStock = statusCounts.EN_STOCK_NON_AFFECTE ?? 0;
     const affectes = statusCounts.AFFECTE ?? 0;
+    const enPanne = statusCounts.EN_PANNE ?? 0;
 
     const simple_data: SimpleData = {
       totalMateriels,
       enStock,
       affectes,
       reparationsEnCours,
+      enPanne,
+      garantiesExpirees,
+      aRenouveler,
     };
 
     const etatsOrdre: AssetStatus[] = [

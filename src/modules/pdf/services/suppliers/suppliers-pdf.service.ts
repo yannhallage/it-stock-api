@@ -186,6 +186,8 @@ export class SuppliersPdfService {
 <th>#</th>
 <th>Nom</th>
 <th>Contact</th>
+<th>Téléphone</th>
+<th>Email</th>
 <th>Adresse</th>
 <th>Date creation</th>
 <th>Archive</th>
@@ -210,6 +212,8 @@ ${rows}
 <td class="num">${index}</td>
 <td>${this.escapeHtml(row.name)}</td>
 <td>${this.escapeHtml(row.contact)}</td>
+<td>${this.escapeHtml(row.phone)}</td>
+<td>${this.escapeHtml(row.email)}</td>
 <td>${this.escapeHtml(row.address)}</td>
 <td class="center">${this.formatDate(row.createdAtRaw)}</td>
 <td class="center">${this.escapeHtml(row.isArchived)}</td>
@@ -248,6 +252,8 @@ ${rows}
       index: 0,
       name: '-',
       contact: '-',
+      phone: '-',
+      email: '-',
       address: '-',
       createdAt: '-',
       createdAtRaw: null,

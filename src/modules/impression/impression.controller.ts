@@ -51,6 +51,67 @@ export class ImpressionController {
 
   /**
    * @swagger
+   * /api/impression/printInventory:
+   *   get:
+   *     summary: Génère le rapport PDF inventaire / parc informatique
+   *     tags: [Impression]
+   *     responses:
+   *       200:
+   *         description: PDF généré avec succès
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   */
+  printInventory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { value, errors } = validateAssetFilterDto(req.query);
+
+      if (errors) {
+        return res.status(400).json({ errors });
+      }
+
+      const pdfBuffer = await impressionService.printInventory(value);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="inventaire-parc.pdf"');
+      return res.status(200).send(pdfBuffer);
+    } catch (error) {
+      logger.error({ err: error }, '[ImpressionController] Erreur impression inventaire');
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
+   * /api/impression/printSignaleticSheets:
+   *   get:
+   *     summary: Génère les fiches signalétiques inventaire physique
+   *     tags: [Impression]
+   */
+  printSignaleticSheets = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { value, errors } = validateAssetFilterDto(req.query);
+
+      if (errors) {
+        return res.status(400).json({ errors });
+      }
+
+      const pdfBuffer = await impressionService.printSignaleticSheets(value);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="fiches-signaletiques.pdf"',
+      );
+      return res.status(200).send(pdfBuffer);
+    } catch (error) {
+      logger.error({ err: error }, '[ImpressionController] Erreur fiches signaletiques');
+      return next(error);
+    }
+  };
+
+  /**
+   * @swagger
    * /api/impression/printAsset/{inventoryNumber}:
    *   get:
    *     summary: Genere la fiche PDF d'un materiel par numero d'inventaire

@@ -217,6 +217,9 @@ model Asset {
 
   status AssetStatus @default(EN_STOCK_NON_AFFECTE)
 
+  lastPhysicalInventoryAt DateTime?
+  physicalInventoryNote   String?
+
   assignments  Assignment[]
   incidents    Incident[]
   repairs      Repair[]
@@ -235,6 +238,7 @@ model Asset {
   @@index([materialTypeId])
   @@index([supplierId])
   @@index([locationId])
+  @@index([lastPhysicalInventoryAt])
 }
 
 /////////////////////////////////////////////////////

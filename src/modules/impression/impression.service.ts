@@ -14,6 +14,9 @@ import { IncidentsListPdfDataService } from '../pdf/services/incidents/incidents
 import { IncidentsListPdfService } from '../pdf/services/incidents/incidents-list-pdf.service';
 import { AssetDetailPdfService } from '../pdf/services/asset-detail-pdf.service';
 import { ScreenLoansPdfService } from '../pdf/services/screen-loans/screen-loans-pdf.service';
+import { InventoryPdfDataService } from '../pdf/services/inventory/inventory-pdf-data.service';
+import { InventoryPdfService } from '../pdf/services/inventory/inventory-pdf.service';
+import { SignaleticSheetPdfService } from '../pdf/services/inventory/signaletic-sheet-pdf.service';
 import { HttpError } from '../../errors/http-error';
 
 export class ImpressionService {
@@ -32,13 +35,36 @@ export class ImpressionService {
   private readonly incidentsListPdfService = new IncidentsListPdfService();
   private readonly assetDetailPdfService = new AssetDetailPdfService();
   private readonly screenLoansPdfService = new ScreenLoansPdfService();
+  private readonly inventoryPdfDataService = new InventoryPdfDataService();
+  private readonly inventoryPdfService = new InventoryPdfService();
+  private readonly signaleticSheetPdfService = new SignaleticSheetPdfService();
 
   async printAssets(filters: AssetFilterDto = {}): Promise<Buffer> {
     const assets = await this.stocksService.getAssets(filters);
-    const printData = this.stockAssetsPdfDataService.buildStockAssetsSheet(assets, {
+    const printData = this.stockAssetsPdfDataService.buildStockAssetsSheet(assets as any, {
       filters: this.buildAssetFilterSummary(filters),
     });
     return this.stockAssetsPdfService.generateStockAssetsSheet(printData);
+  }
+
+  async printInventory(filters: AssetFilterDto = {}): Promise<Buffer> {
+    const assets = await this.stocksService.getAssets(filters);
+    const printData = this.inventoryPdfDataService.buildInventorySheet(assets as any, {
+      filters: this.buildAssetFilterSummary(filters),
+      columns: filters.columns,
+      title: filters.warrantyExpired || filters.minAgeYears
+        ? 'Materiels a renouveler'
+        : 'Etat du parc informatique',
+    });
+    return this.inventoryPdfService.generateInventorySheet(printData);
+  }
+
+  async printSignaleticSheets(filters: AssetFilterDto = {}): Promise<Buffer> {
+    const assets = await this.stocksService.getAssets(filters);
+    if (assets.length === 0) {
+      throw new HttpError(404, 'Aucun materiel a imprimer.', 'NO_ASSETS_FOR_SIGNALETIC');
+    }
+    return this.signaleticSheetPdfService.generateSignaleticSheets(assets as any);
   }
 
   private buildAssetFilterSummary(filters: AssetFilterDto): string[] {
@@ -46,10 +72,17 @@ export class ImpressionService {
 
     if (filters.search) summary.push(`Recherche: ${filters.search}`);
     if (filters.materialTypeId) summary.push(`Type materiel: #${filters.materialTypeId}`);
+    if (filters.materialTypeIds?.length) {
+      summary.push(`Types: ${filters.materialTypeIds.join(', ')}`);
+    }
     if (filters.categoryId) summary.push(`Categorie: #${filters.categoryId}`);
     if (filters.brandId) summary.push(`Marque: #${filters.brandId}`);
-    if (filters.departmentId) summary.push(`Departement: #${filters.departmentId}`);
+    if (filters.departmentId) summary.push(`Direction: #${filters.departmentId}`);
+    if (filters.userId) summary.push(`Utilisateur: ${filters.userId}`);
     if (filters.status) summary.push(`Etat: ${filters.status.replace(/_/g, ' ')}`);
+    if (filters.warrantyExpired) summary.push('Garantie expiree');
+    if (filters.minAgeYears) summary.push(`Age >= ${filters.minAgeYears} ans`);
+    if (filters.physicalInventoryPending) summary.push('Non inventorie physiquement');
 
     if (filters.entryDateFrom || filters.entryDateTo) {
       const from = filters.entryDateFrom ? this.formatDate(filters.entryDateFrom) : 'debut';

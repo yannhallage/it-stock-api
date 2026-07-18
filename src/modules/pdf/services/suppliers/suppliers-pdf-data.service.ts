@@ -22,6 +22,8 @@ export class SuppliersPdfDataService {
         index: index + 1,
         name: supplier.name,
         contact: supplier.contact ?? 'N/A',
+        phone: supplier.phone ?? 'N/A',
+        email: supplier.email ?? 'N/A',
         address: supplier.address ?? 'N/A',
         createdAt: formatDateTime(supplier.createdAt),
         createdAtRaw: supplier.createdAt ?? null,

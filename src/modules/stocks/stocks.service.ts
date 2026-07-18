@@ -247,9 +247,7 @@ export class StocksService {
     }
   }
 
-  async getAssets(filters: AssetFilterDto) {
-    logger.debug({ filters }, '[StocksService] Listing des matériels');
-
+  private buildAssetWhere(filters: AssetFilterDto): Prisma.AssetWhereInput {
     const where: Prisma.AssetWhereInput = {};
     const andConditions: Prisma.AssetWhereInput[] = [];
 
@@ -263,28 +261,41 @@ export class StocksService {
           { brand: { name: { contains: search, mode: 'insensitive' } } },
           { materialType: { name: { contains: search, mode: 'insensitive' } } },
           { supplier: { name: { contains: search, mode: 'insensitive' } } },
+          {
+            assignments: {
+              some: {
+                endDate: null,
+                OR: [
+                  { user: { firstName: { contains: search, mode: 'insensitive' } } },
+                  { user: { lastName: { contains: search, mode: 'insensitive' } } },
+                  { department: { name: { contains: search, mode: 'insensitive' } } },
+                ],
+              },
+            },
+          },
         ],
       });
     }
 
     if (filters.departmentId) {
       andConditions.push({
-        OR: [
-          {
-            assignments: {
-              some: {
-                departmentId: filters.departmentId,
-              },
-            },
+        assignments: {
+          some: {
+            departmentId: filters.departmentId,
+            endDate: null,
           },
-          {
-            incidents: {
-              some: {
-                departmentId: filters.departmentId,
-              },
-            },
+        },
+      });
+    }
+
+    if (filters.userId) {
+      andConditions.push({
+        assignments: {
+          some: {
+            userId: filters.userId,
+            endDate: null,
           },
-        ],
+        },
       });
     }
 
@@ -299,8 +310,15 @@ export class StocksService {
       });
     }
 
-    if (filters.materialTypeId) {
-      where.materialTypeId = filters.materialTypeId;
+    const typeIds = [
+      ...(filters.materialTypeIds ?? []),
+      ...(filters.materialTypeId != null ? [filters.materialTypeId] : []),
+    ];
+    const uniqueTypeIds = [...new Set(typeIds)];
+    if (uniqueTypeIds.length === 1) {
+      where.materialTypeId = uniqueTypeIds[0];
+    } else if (uniqueTypeIds.length > 1) {
+      where.materialTypeId = { in: uniqueTypeIds };
     }
 
     if (filters.categoryId) {
@@ -322,9 +340,55 @@ export class StocksService {
       };
     }
 
+    if (filters.warrantyExpired) {
+      andConditions.push({
+        warrantyEndDate: { lt: new Date() },
+      });
+    }
+
+    if (filters.minAgeYears != null) {
+      const threshold = new Date();
+      threshold.setFullYear(threshold.getFullYear() - filters.minAgeYears);
+      andConditions.push({
+        entryDate: { lte: threshold },
+      });
+    }
+
+    if (filters.physicalInventoryPending) {
+      andConditions.push({
+        lastPhysicalInventoryAt: null,
+      });
+    }
+
     if (andConditions.length > 0) {
       where.AND = andConditions;
     }
+
+    return where;
+  }
+
+  private mapAssetWithCurrentAssignment<
+    T extends {
+      assignments?: Array<{
+        endDate: Date | null;
+        user: { id: string; firstName: string; lastName: string; email: string };
+        department: { id: number; name: string };
+      }>;
+    },
+  >(asset: T) {
+    const { assignments, ...rest } = asset;
+    const currentAssignment =
+      assignments?.find((assignment) => assignment.endDate === null) ?? null;
+    return {
+      ...rest,
+      currentAssignment,
+    };
+  }
+
+  async getAssets(filters: AssetFilterDto) {
+    logger.debug({ filters }, '[StocksService] Listing des matériels');
+
+    const where = this.buildAssetWhere(filters);
 
     try {
       const assets = await prisma.asset.findMany({
@@ -335,6 +399,15 @@ export class StocksService {
           brand: { select: { id: true, name: true } },
           supplier: { select: { id: true, name: true } },
           location: { select: { id: true, name: true } },
+          assignments: {
+            where: { endDate: null },
+            take: 1,
+            orderBy: { startDate: 'desc' },
+            include: {
+              user: { select: { id: true, firstName: true, lastName: true, email: true } },
+              department: { select: { id: true, name: true } },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -343,7 +416,7 @@ export class StocksService {
 
       logger.debug({ count: assets.length }, '[StocksService] Listing des matériels terminé');
 
-      return assets;
+      return assets.map((asset) => this.mapAssetWithCurrentAssignment(asset));
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
         logger.warn(
@@ -365,6 +438,88 @@ export class StocksService {
 
       throw error;
     }
+  }
+
+  async getInventorySummary(filters: AssetFilterDto = {}) {
+    logger.debug({ filters }, '[StocksService] Synthèse inventaire demandée');
+
+    const where = this.buildAssetWhere(filters);
+
+    const [total, byStatusRows, warrantyExpired, toRenew] = await Promise.all([
+      prisma.asset.count({ where }),
+      prisma.asset.groupBy({
+        by: ['status'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.asset.count({
+        where: {
+          AND: [where, { warrantyEndDate: { lt: new Date() } }],
+        },
+      }),
+      prisma.asset.count({
+        where: {
+          AND: [
+            where,
+            {
+              OR: [
+                { warrantyEndDate: { lt: new Date() } },
+                {
+                  entryDate: {
+                    lte: (() => {
+                      const d = new Date();
+                      d.setFullYear(d.getFullYear() - 4);
+                      return d;
+                    })(),
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    ]);
+
+    const byStatus = Object.fromEntries(
+      byStatusRows.map((row) => [row.status, row._count.id]),
+    ) as Partial<Record<AssetStatus, number>>;
+
+    return {
+      total,
+      byStatus,
+      assigned: byStatus.AFFECTE ?? 0,
+      inStock: byStatus.EN_STOCK_NON_AFFECTE ?? 0,
+      inRepair: byStatus.EN_REPARATION ?? 0,
+      broken: byStatus.EN_PANNE ?? 0,
+      outOfService: byStatus.HORS_SERVICE ?? 0,
+      inLoan: byStatus.EN_PRET ?? 0,
+      inService: byStatus.EN_SERVICE ?? 0,
+      warrantyExpired,
+      toRenew,
+    };
+  }
+
+  async markPhysicalInventory(
+    id: number,
+    data: { note?: string | null; inventoriedAt?: Date },
+  ) {
+    const existing = await prisma.asset.findUnique({ where: { id } });
+    if (!existing) return null;
+
+    return prisma.asset.update({
+      where: { id },
+      data: {
+        lastPhysicalInventoryAt: data.inventoriedAt ?? new Date(),
+        physicalInventoryNote: data.note ?? null,
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        materialType: { select: { id: true, name: true } },
+        brand: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
+        location: { select: { id: true, name: true } },
+      },
+    });
   }
 
   async getAssetById(id: number) {
