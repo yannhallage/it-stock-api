@@ -5,10 +5,16 @@ import { HttpError } from '../../errors/http-error';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { IncidentFilterDto } from './dto/filter-incidents.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
+import { assetSelect } from '../../prisma/asset-select';
+
+const incidentInclude = {
+  department: { select: { id: true, name: true } },
+  asset: { select: assetSelect },
+} as const;
 
 export class IncidentsService {
   private buildIncidentWhere(params: IncidentFilterDto): Prisma.IncidentWhereInput {
-    const { assetId, status } = params;
+    const { assetId, status, departmentId } = params;
     const where: Prisma.IncidentWhereInput = {};
 
     if (typeof assetId === 'number') {
@@ -19,6 +25,10 @@ export class IncidentsService {
       where.status = status;
     }
 
+    if (typeof departmentId === 'number') {
+      where.departmentId = departmentId;
+    }
+
     return where;
   }
 
@@ -26,25 +36,14 @@ export class IncidentsService {
     const where = this.buildIncidentWhere(params);
 
     logger.debug(
-      { assetId: params.assetId, status: params.status },
+      { assetId: params.assetId, status: params.status, departmentId: params.departmentId },
       '[IncidentsService] Listing des incidents',
     );
 
     const incidents = await prisma.incident.findMany({
       where,
       orderBy: { reportedAt: 'desc' },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: incidentInclude,
     });
 
     logger.debug(
@@ -60,7 +59,7 @@ export class IncidentsService {
     const where = this.buildIncidentWhere(params);
 
     logger.debug(
-      { assetId: params.assetId, status: params.status },
+      { assetId: params.assetId, status: params.status, departmentId: params.departmentId },
       '[IncidentsService] Listing des incidents pour impression PDF',
     );
 
@@ -68,19 +67,17 @@ export class IncidentsService {
       where,
       orderBy: { reportedAt: 'desc' },
       include: {
+        department: { select: { id: true, name: true } },
         asset: {
           select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
+            ...assetSelect,
             assignments: {
               where: { endDate: null },
               orderBy: { startDate: 'desc' },
               take: 1,
-              select: { user: true },
+              select: {
+                user: { select: { firstName: true, lastName: true, email: true } },
+              },
             },
           },
         },
@@ -106,18 +103,7 @@ export class IncidentsService {
 
     const incident = await prisma.incident.findUnique({
       where: { id },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: incidentInclude,
     });
 
     if (!incident) {
@@ -130,7 +116,7 @@ export class IncidentsService {
 
   async createForAsset(assetId: number, data: CreateIncidentDto) {
     logger.info(
-      { assetId, department: data.department },
+      { assetId, departmentId: data.departmentId },
       '[IncidentsService] Création d’un incident demandée',
     );
 
@@ -158,7 +144,7 @@ export class IncidentsService {
             assetId,
             description: data.description,
             reportedAt: data.reportedAt,
-            department: data.department,
+            departmentId: data.departmentId,
             status: IncidentStatus.OUVERT,
           },
         });
@@ -171,7 +157,6 @@ export class IncidentsService {
           data: { status: newStatus },
         });
 
-        // Historique : incident signalé
         const eventIncident = await tx.historyEvent.create({
           data: {
             assetId,
@@ -180,7 +165,7 @@ export class IncidentsService {
               incidentId: incident.id,
               description: incident.description,
               reportedAt: incident.reportedAt.toISOString(),
-              department: incident.department,
+              departmentId: incident.departmentId,
               status: incident.status,
             },
           },
@@ -188,7 +173,6 @@ export class IncidentsService {
 
         const historyEvents = [eventIncident];
 
-        // Historique : changement de statut du matériel si nécessaire
         if (previousStatus !== updatedAsset.status) {
           const eventStatus = await tx.historyEvent.create({
             data: {
@@ -205,7 +189,12 @@ export class IncidentsService {
           historyEvents.push(eventStatus);
         }
 
-        return { incident, historyEvents };
+        const incidentWithRelations = await tx.incident.findUnique({
+          where: { id: incident.id },
+          include: incidentInclude,
+        });
+
+        return { incident: incidentWithRelations!, historyEvents };
       });
 
       if (!result) {
@@ -235,11 +224,11 @@ export class IncidentsService {
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
-          logger.warn({ assetId, error }, '[IncidentsService] Matériel inexistant (FK)');
+          logger.warn({ assetId, error }, '[IncidentsService] Matériel ou département inexistant (FK)');
           throw new HttpError(
             404,
-            'Matériel non trouvé.',
-            'ASSET_NOT_FOUND',
+            'Matériel ou département non trouvé.',
+            'ASSET_OR_DEPARTMENT_NOT_FOUND',
           );
         }
         logger.warn({ assetId, code: error.code, error }, '[IncidentsService] Erreur Prisma connue');
@@ -298,18 +287,7 @@ export class IncidentsService {
       const updated = await prisma.incident.update({
         where: { id },
         data: { status: data.status },
-        include: {
-          asset: {
-            select: {
-              id: true,
-              inventoryNumber: true,
-              type: true,
-              brand: true,
-              model: true,
-              status: true,
-            },
-          },
-        },
+        include: incidentInclude,
       });
 
       logger.info(

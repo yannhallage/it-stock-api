@@ -4,7 +4,7 @@ import { AssignmentSheetPdfDataService } from '../services/assignments/assignmen
 import { AssignmentSheetPdfService } from '../services/assignments/assignment-sheet-pdf.service';
 import { AssignmentSheetPrintPayload } from '../services/assignments/assignment-sheet-pdf.types';
 
-const defaultPayload: AssignmentSheetPrintPayload = [
+const defaultPayload = [
   {
     id: 1,
     assetId: 101,
@@ -73,7 +73,7 @@ const defaultPayload: AssignmentSheetPrintPayload = [
       status: 'EN_STOCK_NON_AFFECTE',
     },
   },
-];
+] as unknown as AssignmentSheetPrintPayload;
 
 const run = async () => {
   const dataService = new AssignmentSheetPdfDataService();

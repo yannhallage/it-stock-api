@@ -12,11 +12,21 @@ const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 3600;
 
 type PublicUser = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   createdAt: Date;
   updatedAt: Date;
 };
+
+const publicUserSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 export class AuthService {
   private buildSession(user: PublicUser) {
@@ -60,17 +70,12 @@ export class AuthService {
     try {
       const user = await prisma.user.create({
         data: {
-          name: data.name,
+          firstName: data.firstName,
+          lastName: data.lastName,
           email: data.email,
           password: hashedPassword,
         },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: publicUserSelect,
       });
 
       logger.info({ id: user.id, email: user.email }, '[AuthService] Utilisateur créé avec succès');
@@ -98,12 +103,8 @@ export class AuthService {
     const user = await prisma.user.findUnique({
       where: { email: data.email },
       select: {
-        id: true,
-        name: true,
-        email: true,
+        ...publicUserSelect,
         password: true,
-        createdAt: true,
-        updatedAt: true,
       },
     });
 
@@ -129,13 +130,7 @@ export class AuthService {
     logger.debug('[AuthService] Récupération profil utilisateur');
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: publicUserSelect,
     });
 
     if (!user) {

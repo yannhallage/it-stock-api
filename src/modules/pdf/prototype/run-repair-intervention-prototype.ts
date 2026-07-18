@@ -5,7 +5,7 @@ import { RepairInterventionPdfDataService } from '../services/repair-interventio
 import { RepairInterventionPdfService } from '../services/repair-intervention-pdf.service';
 import { RepairInterventionPrintPayload } from '../services/repair-intervention-pdf.types';
 
-const defaultPayload: RepairInterventionPrintPayload = {
+const defaultPayload = {
   repair: {
     id: 1001,
     workshopEntryDate: new Date('2026-04-20T08:30:00.000Z'),
@@ -39,7 +39,7 @@ const defaultPayload: RepairInterventionPrintPayload = {
       createdAt: new Date('2026-04-21T15:20:00.000Z'),
     },
   ],
-};
+} as unknown as RepairInterventionPrintPayload;
 
 const run = async () => {
   const dataService = new RepairInterventionPdfDataService();

@@ -5,7 +5,7 @@ import { StockAssetsPdfDataService } from '../services/assets/stock-assets-pdf-d
 import { StockAssetsPdfService } from '../services/assets/stock-assets-pdf.service';
 import { StockAssetPrintPayload } from '../services/assets/stock-assets-pdf.types';
 
-const defaultPayload: StockAssetPrintPayload = [
+const defaultPayload = [
   {
     id: 1,
     inventoryNumber: 'INV-2026-001',
@@ -216,7 +216,7 @@ const defaultPayload: StockAssetPrintPayload = [
     warrantyEndDate: null,
     createdAt: new Date('2026-03-10T09:05:00.000Z'),
   },
-];
+] as unknown as StockAssetPrintPayload;
 
 const run = async () => {
   const dataService = new StockAssetsPdfDataService();

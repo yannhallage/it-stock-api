@@ -3,6 +3,7 @@ import { IncidentStatus } from '@prisma/client';
 export interface IncidentFilterDto {
   assetId?: number;
   status?: IncidentStatus;
+  departmentId?: number;
 }
 
 export const validateIncidentFilterDto = (
@@ -12,6 +13,7 @@ export const validateIncidentFilterDto = (
 
   let assetId: number | undefined;
   let status: IncidentStatus | undefined;
+  let departmentId: number | undefined;
 
   if (query.assetId != null) {
     const parsed = parseInt(String(query.assetId), 10);
@@ -19,6 +21,15 @@ export const validateIncidentFilterDto = (
       errors.push('Le filtre assetId doit être un entier valide.');
     } else {
       assetId = parsed;
+    }
+  }
+
+  if (query.departmentId != null) {
+    const parsed = parseInt(String(query.departmentId), 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      errors.push('Le filtre departmentId doit être un entier strictement positif.');
+    } else {
+      departmentId = parsed;
     }
   }
 
@@ -39,6 +50,7 @@ export const validateIncidentFilterDto = (
     value: {
       assetId,
       status,
+      departmentId,
     },
   };
 };

@@ -11,6 +11,16 @@ import { HttpError } from '../../errors/http-error';
 import { StartRepairDto } from './dto/start-repair.dto';
 import { CloseRepairDto } from './dto/close-repair.dto';
 import { RepairFilterDto } from './dto/filter-repairs.dto';
+import { assetSelect } from '../../prisma/asset-select';
+
+const repairInclude = {
+  asset: { select: assetSelect },
+  incident: {
+    include: {
+      department: { select: { id: true, name: true } },
+    },
+  },
+} as const;
 
 export class WorkshopService {
   /**
@@ -21,22 +31,7 @@ export class WorkshopService {
 
     const repairs = await prisma.repair.findMany({
       orderBy: { workshopEntryDate: 'desc' },
-      include: {
-        incident: {
-          include: {
-            asset: {
-              select: {
-                id: true,
-                inventoryNumber: true,
-                type: true,
-                brand: true,
-                model: true,
-                status: true,
-              },
-            },
-          },
-        },
-      },
+      include: repairInclude,
     });
 
     logger.debug(
@@ -63,22 +58,7 @@ export class WorkshopService {
 
     const repair = await prisma.repair.findUnique({
       where: { id },
-      include: {
-        incident: {
-          include: {
-            asset: {
-              select: {
-                id: true,
-                inventoryNumber: true,
-                type: true,
-                brand: true,
-                model: true,
-                status: true,
-              },
-            },
-          },
-        },
-      },
+      include: repairInclude,
     });
 
     if (!repair) {
@@ -105,23 +85,7 @@ export class WorkshopService {
 
     const repair = await prisma.repair.findUnique({
       where: { id },
-      include: {
-        incident: {
-          include: {
-            asset: {
-              select: {
-                id: true,
-                inventoryNumber: true,
-                serial_number: true,
-                type: true,
-                brand: true,
-                model: true,
-                status: true,
-              },
-            },
-          },
-        },
-      },
+      include: repairInclude,
     });
 
     if (!repair) {
@@ -131,7 +95,7 @@ export class WorkshopService {
 
     const history = await prisma.historyEvent.findMany({
       where: {
-        assetId: repair.incident.asset.id,
+        assetId: repair.assetId,
         type: {
           in: [HistoryEventType.REPAIR_STARTED, HistoryEventType.REPAIR_FINISHED],
         },
@@ -206,6 +170,7 @@ export class WorkshopService {
 
         const repair = await tx.repair.create({
           data: {
+            assetId: incident.assetId,
             incidentId: data.incidentId,
             technicianName: data.technicianName ?? null,
             workshopEntryDate: data.workshopEntryDate,
@@ -252,22 +217,7 @@ export class WorkshopService {
 
       const repairWithRelations = await prisma.repair.findUnique({
         where: { id: result.repair.id },
-        include: {
-          incident: {
-            include: {
-              asset: {
-                select: {
-                  id: true,
-                  inventoryNumber: true,
-                  type: true,
-                  brand: true,
-                  model: true,
-                  status: true,
-                },
-              },
-            },
-          },
-        },
+        include: repairInclude,
       });
 
       return repairWithRelations;
@@ -334,7 +284,7 @@ export class WorkshopService {
       const result = await prisma.$transaction(async (tx) => {
         const repair = await tx.repair.findUnique({
           where: { id: repairId },
-          include: { incident: { include: { asset: true } } },
+          include: { incident: { include: { asset: true } }, asset: true },
         });
 
         if (!repair) {
@@ -355,8 +305,8 @@ export class WorkshopService {
         }
 
         const incident = repair.incident;
-        const assetId = incident.assetId;
-        const previousAssetStatus = incident.asset.status;
+        const assetId = repair.assetId;
+        const previousAssetStatus = repair.asset.status;
         const workshopExitDate = new Date();
 
         await tx.repair.update({
@@ -368,10 +318,12 @@ export class WorkshopService {
           },
         });
 
-        await tx.incident.update({
-          where: { id: incident.id },
-          data: { status: IncidentStatus.CLOS },
-        });
+        if (incident) {
+          await tx.incident.update({
+            where: { id: incident.id },
+            data: { status: IncidentStatus.CLOS },
+          });
+        }
 
         await tx.asset.update({
           where: { id: assetId },
@@ -384,7 +336,7 @@ export class WorkshopService {
             type: HistoryEventType.REPAIR_FINISHED,
             payload: {
               repairId,
-              incidentId: incident.id,
+              incidentId: incident?.id ?? null,
               outcome: data.outcome,
               workshopExitDate: workshopExitDate.toISOString(),
               previousAssetStatus,
@@ -393,7 +345,7 @@ export class WorkshopService {
           },
         });
 
-        return { repairId, incidentId: incident.id, assetId, outcome: data.outcome };
+        return { repairId, incidentId: incident?.id ?? null, assetId, outcome: data.outcome };
       });
 
       if (!result) {
@@ -412,22 +364,7 @@ export class WorkshopService {
 
       const updated = await prisma.repair.findUnique({
         where: { id: repairId },
-        include: {
-          incident: {
-            include: {
-              asset: {
-                select: {
-                  id: true,
-                  inventoryNumber: true,
-                  type: true,
-                  brand: true,
-                  model: true,
-                  status: true,
-                },
-              },
-            },
-          },
-        },
+        include: repairInclude,
       });
 
       return updated;

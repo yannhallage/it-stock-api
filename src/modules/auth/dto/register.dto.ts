@@ -1,5 +1,6 @@
 export interface RegisterDto {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   confirmPassword?: string;
@@ -8,14 +9,19 @@ export interface RegisterDto {
 export const validateRegisterDto = (body: any): { value?: RegisterDto; errors?: string[] } => {
   const errors: string[] = [];
   const email = typeof body?.email === 'string' ? body.email.toLowerCase().trim() : '';
-  const name = typeof body?.name === 'string' ? body.name.trim() : '';
+  const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : '';
+  const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { errors: ['Le corps de la requête doit être un objet JSON.'] };
   }
 
-  if (name.length < 2) {
+  if (firstName.length < 2) {
+    errors.push('Le prénom est requis et doit contenir au moins 2 caractères.');
+  }
+
+  if (lastName.length < 2) {
     errors.push('Le nom est requis et doit contenir au moins 2 caractères.');
   }
 
@@ -39,7 +45,8 @@ export const validateRegisterDto = (body: any): { value?: RegisterDto; errors?: 
   }
 
   const value: RegisterDto = {
-    name,
+    firstName,
+    lastName,
     email,
     password: body.password,
     confirmPassword: body.confirmPassword,
@@ -47,4 +54,3 @@ export const validateRegisterDto = (body: any): { value?: RegisterDto; errors?: 
 
   return { value };
 };
-

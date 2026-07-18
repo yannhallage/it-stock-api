@@ -4,17 +4,29 @@ export type IncidentsListPrintPayload = Array<{
   id: number;
   assetId: number;
   status: IncidentStatus;
-  department: string;
+  departmentId: number;
   reportedAt: Date;
   description: string;
+  department: {
+    id: number;
+    name: string;
+  };
   asset: {
     id: number;
     inventoryNumber: string;
-    type: string;
-    brand: string;
+    serialNumber: string | null;
     model: string;
     status: AssetStatus;
-    assignments: Array<{ user: unknown }>;
+    category: { id: number; name: string };
+    materialType: { id: number; name: string };
+    brand: { id: number; name: string };
+    assignments: Array<{
+      user: {
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+    }>;
   };
 }>;
 

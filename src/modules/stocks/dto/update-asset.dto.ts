@@ -1,16 +1,54 @@
+import { AssetStatus } from '@prisma/client';
+
 export interface UpdateAssetDto {
   inventoryNumber?: string;
-  serial_number?: string | null;
-  type?: string;
-  brand?: string;
+  serialNumber?: string | null;
+  categoryId?: number;
+  materialTypeId?: number;
+  brandId?: number;
+  supplierId?: number | null;
+  locationId?: number | null;
   model?: string;
   entryDate?: Date;
-  supplier?: string;
+  purchasePrice?: number | null;
   warrantyStartDate?: Date | null;
   warrantyEndDate?: Date | null;
-  warrantyMonths?: number;
-  status?: string;
+  status?: AssetStatus;
 }
+
+const parseOptionalInt = (
+  value: unknown,
+  fieldLabel: string,
+  errors: string[],
+): number | undefined => {
+  if (value == null || value === '') {
+    return undefined;
+  }
+
+  const parsed = parseInt(String(value), 10);
+  if (Number.isNaN(parsed) || parsed < 1) {
+    errors.push(`${fieldLabel} doit être un entier strictement positif.`);
+    return undefined;
+  }
+
+  return parsed;
+};
+
+const parseNullableInt = (
+  value: unknown,
+  fieldLabel: string,
+  errors: string[],
+): number | null | undefined => {
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return parseOptionalInt(value, fieldLabel, errors) ?? null;
+};
 
 export const validateUpdateAssetDto = (
   body: any,
@@ -20,16 +58,18 @@ export const validateUpdateAssetDto = (
 
   const hasInput =
     body.inventoryNumber !== undefined ||
-    body.serial_number !== undefined ||
     body.serialNumber !== undefined ||
-    body.type !== undefined ||
-    body.brand !== undefined ||
+    body.serial_number !== undefined ||
+    body.categoryId !== undefined ||
+    body.materialTypeId !== undefined ||
+    body.brandId !== undefined ||
+    body.supplierId !== undefined ||
+    body.locationId !== undefined ||
     body.model !== undefined ||
     body.entryDate !== undefined ||
-    body.supplier !== undefined ||
+    body.purchasePrice !== undefined ||
     body.warrantyStartDate !== undefined ||
     body.warrantyEndDate !== undefined ||
-    body.warrantyMonths !== undefined ||
     body.status !== undefined;
 
   if (!hasInput) {
@@ -44,33 +84,46 @@ export const validateUpdateAssetDto = (
     }
   }
 
-  const serialInput = body.serial_number !== undefined ? body.serial_number : body.serialNumber;
+  const serialInput = body.serialNumber !== undefined ? body.serialNumber : body.serial_number;
   if (serialInput !== undefined) {
     if (serialInput === null) {
-      value.serial_number = null;
+      value.serialNumber = null;
     } else if (typeof serialInput !== 'string') {
       errors.push('Le numéro de série doit être une chaîne ou null pour effacer.');
     } else if (serialInput.trim().length === 0) {
-      value.serial_number = null;
+      value.serialNumber = null;
     } else {
-      value.serial_number = serialInput.trim();
+      value.serialNumber = serialInput.trim();
     }
   }
 
-  if (body.type !== undefined) {
-    if (typeof body.type !== 'string' || body.type.trim().length === 0) {
-      errors.push('Le type doit être une chaîne non vide lorsqu’il est fourni.');
-    } else {
-      value.type = body.type.trim();
+  if (body.categoryId !== undefined) {
+    const parsed = parseOptionalInt(body.categoryId, 'La catégorie (categoryId)', errors);
+    if (parsed !== undefined) {
+      value.categoryId = parsed;
     }
   }
 
-  if (body.brand !== undefined) {
-    if (typeof body.brand !== 'string' || body.brand.trim().length === 0) {
-      errors.push('La marque doit être une chaîne non vide lorsqu’elle est fournie.');
-    } else {
-      value.brand = body.brand.trim();
+  if (body.materialTypeId !== undefined) {
+    const parsed = parseOptionalInt(body.materialTypeId, 'Le type de matériel (materialTypeId)', errors);
+    if (parsed !== undefined) {
+      value.materialTypeId = parsed;
     }
+  }
+
+  if (body.brandId !== undefined) {
+    const parsed = parseOptionalInt(body.brandId, 'La marque (brandId)', errors);
+    if (parsed !== undefined) {
+      value.brandId = parsed;
+    }
+  }
+
+  if (body.supplierId !== undefined) {
+    value.supplierId = parseNullableInt(body.supplierId, 'Le fournisseur (supplierId)', errors);
+  }
+
+  if (body.locationId !== undefined) {
+    value.locationId = parseNullableInt(body.locationId, 'La localisation (locationId)', errors);
   }
 
   if (body.model !== undefined) {
@@ -94,11 +147,16 @@ export const validateUpdateAssetDto = (
     }
   }
 
-  if (body.supplier !== undefined) {
-    if (typeof body.supplier !== 'string' || body.supplier.trim().length === 0) {
-      errors.push('Le fournisseur doit être une chaîne non vide lorsqu’il est fourni.');
+  if (body.purchasePrice !== undefined) {
+    if (body.purchasePrice === null || body.purchasePrice === '') {
+      value.purchasePrice = null;
     } else {
-      value.supplier = body.supplier.trim();
+      const num = Number(body.purchasePrice);
+      if (Number.isNaN(num) || num < 0) {
+        errors.push('Le prix d\'achat doit être un nombre positif ou nul.');
+      } else {
+        value.purchasePrice = num;
+      }
     }
   }
 
@@ -106,7 +164,12 @@ export const validateUpdateAssetDto = (
     if (typeof body.status !== 'string' || body.status.trim().length === 0) {
       errors.push('Le statut doit être une chaîne non vide lorsqu’il est fourni.');
     } else {
-      value.status = body.status.trim();
+      const normalizedStatus = body.status.trim().toUpperCase().replace(/-/g, '_');
+      if (Object.values(AssetStatus).includes(normalizedStatus as AssetStatus)) {
+        value.status = normalizedStatus as AssetStatus;
+      } else {
+        errors.push(`Le statut doit être l'une des valeurs suivantes: ${Object.values(AssetStatus).join(', ')}.`);
+      }
     }
   }
 
@@ -143,16 +206,6 @@ export const validateUpdateAssetDto = (
         parsedWarrantyEnd = d;
         value.warrantyEndDate = d;
       }
-    }
-  }
-
-  let parsedWarrantyMonths: number | undefined;
-  if (body.warrantyMonths !== undefined) {
-    if (!Number.isInteger(body.warrantyMonths) || body.warrantyMonths < 0) {
-      errors.push('La durée de garantie (warrantyMonths) doit être un entier positif ou nul.');
-    } else {
-      parsedWarrantyMonths = body.warrantyMonths;
-      value.warrantyMonths = body.warrantyMonths;
     }
   }
 

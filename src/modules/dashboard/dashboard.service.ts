@@ -66,7 +66,7 @@ export class DashboardService {
   async getDashboard(): Promise<DashboardData> {
     logger.debug('[DashboardService] Calcul des indicateurs du tableau de bord');
 
-    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes, materielsParType] =
+    const [totalMateriels, repartitionByStatus, reparationsEnCours, topDirectionsPannes, materielsParMaterialTypeId] =
       await Promise.all([
         prisma.asset.count(),
         prisma.asset.groupBy({
@@ -75,14 +75,35 @@ export class DashboardService {
         }),
         prisma.repair.count({ where: { status: 'EN_COURS' } }),
         prisma.incident.groupBy({
-          by: ['department'],
+          by: ['departmentId'],
           _count: { id: true },
         }),
         prisma.asset.groupBy({
-          by: ['type'],
+          by: ['materialTypeId'],
           _count: { id: true },
         }),
       ]);
+
+    const departmentIds = topDirectionsPannes.map((row) => row.departmentId);
+    const materialTypeIds = materielsParMaterialTypeId.map((row) => row.materialTypeId);
+
+    const [departments, materialTypes] = await Promise.all([
+      departmentIds.length > 0
+        ? prisma.department.findMany({
+            where: { id: { in: departmentIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+      materialTypeIds.length > 0
+        ? prisma.materialType.findMany({
+            where: { id: { in: materialTypeIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const departmentNames = new Map(departments.map((d) => [d.id, d.name]));
+    const materialTypeNames = new Map(materialTypes.map((t) => [t.id, t.name]));
 
     const statusCounts = Object.fromEntries(
       repartitionByStatus.map((r) => [r.status, r._count.id]),
@@ -116,7 +137,7 @@ export class DashboardService {
 
     const top_directions_pannes: TopDirectionPannes[] = topDirectionsPannes
       .map((r) => ({
-        direction: r.department,
+        direction: departmentNames.get(r.departmentId) ?? `Département #${r.departmentId}`,
         count: r._count.id,
       }))
       .sort((a, b) => b.count - a.count);
@@ -127,8 +148,8 @@ export class DashboardService {
       count: statusCounts[etat] ?? 0,
     }));
 
-    const materiels_par_type: MaterielParType[] = materielsParType.map((r) => ({
-      type: r.type,
+    const materiels_par_type: MaterielParType[] = materielsParMaterialTypeId.map((r) => ({
+      type: materialTypeNames.get(r.materialTypeId) ?? `Type #${r.materialTypeId}`,
       count: r._count.id,
     }));
 

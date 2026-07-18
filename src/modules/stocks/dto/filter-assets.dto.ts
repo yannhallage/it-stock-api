@@ -2,12 +2,14 @@ import { AssetStatus } from '@prisma/client';
 
 export interface AssetFilterDto {
   search?: string;
-  type?: string;
   status?: AssetStatus;
-  department?: string;
-  computer?: string;
+  departmentId?: number;
+  materialTypeId?: number;
+  categoryId?: number;
+  brandId?: number;
   entryDateFrom?: Date;
   entryDateTo?: Date;
+  computer?: string;
 }
 
 const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,6 +20,31 @@ const readText = (value: unknown): string | undefined => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const readInt = (
+  value: unknown,
+  fieldLabel: string,
+  errors: string[],
+): number | undefined => {
+  if (value == null || value === '') {
+    return undefined;
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number' && !Array.isArray(value)) {
+    errors.push(`${fieldLabel} doit etre un entier valide.`);
+    return undefined;
+  }
+
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = parseInt(String(raw), 10);
+
+  if (Number.isNaN(parsed) || parsed < 1) {
+    errors.push(`${fieldLabel} doit etre un entier strictement positif.`);
+    return undefined;
+  }
+
+  return parsed;
 };
 
 const readDate = (
@@ -53,9 +80,11 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
   const errors: string[] = [];
 
   const search = readText(query.search) ?? readText(query.q);
-  const type = readText(query.type);
-  const department = readText(query.department);
   const computer = readText(query.computer);
+  const departmentId = readInt(query.departmentId, 'departmentId', errors);
+  const materialTypeId = readInt(query.materialTypeId, 'materialTypeId', errors);
+  const categoryId = readInt(query.categoryId, 'categoryId', errors);
+  const brandId = readInt(query.brandId, 'brandId', errors);
   const entryDateFrom = readDate(
     query.entryDateFrom ?? query.from ?? query.startDate,
     'entryDateFrom',
@@ -88,16 +117,44 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
     errors.push('Le filtre q doit etre une chaine de caracteres.');
   }
 
-  if (query.type != null && typeof query.type !== 'string' && !Array.isArray(query.type)) {
-    errors.push('Le type doit etre une chaine de caracteres.');
-  }
-
   if (query.status != null && typeof query.status !== 'string' && !Array.isArray(query.status)) {
     errors.push('Le statut doit etre une chaine de caracteres.');
   }
 
-  if (query.department != null && typeof query.department !== 'string' && !Array.isArray(query.department)) {
-    errors.push('La direction/service (department) doit etre une chaine de caracteres.');
+  if (
+    query.departmentId != null &&
+    typeof query.departmentId !== 'string' &&
+    typeof query.departmentId !== 'number' &&
+    !Array.isArray(query.departmentId)
+  ) {
+    errors.push('Le filtre departmentId doit etre un entier.');
+  }
+
+  if (
+    query.materialTypeId != null &&
+    typeof query.materialTypeId !== 'string' &&
+    typeof query.materialTypeId !== 'number' &&
+    !Array.isArray(query.materialTypeId)
+  ) {
+    errors.push('Le filtre materialTypeId doit etre un entier.');
+  }
+
+  if (
+    query.categoryId != null &&
+    typeof query.categoryId !== 'string' &&
+    typeof query.categoryId !== 'number' &&
+    !Array.isArray(query.categoryId)
+  ) {
+    errors.push('Le filtre categoryId doit etre un entier.');
+  }
+
+  if (
+    query.brandId != null &&
+    typeof query.brandId !== 'string' &&
+    typeof query.brandId !== 'number' &&
+    !Array.isArray(query.brandId)
+  ) {
+    errors.push('Le filtre brandId doit etre un entier.');
   }
 
   if (query.computer != null && typeof query.computer !== 'string' && !Array.isArray(query.computer)) {
@@ -115,9 +172,11 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
   return {
     value: {
       search,
-      type,
       status,
-      department,
+      departmentId,
+      materialTypeId,
+      categoryId,
+      brandId,
       computer,
       entryDateFrom,
       entryDateTo,

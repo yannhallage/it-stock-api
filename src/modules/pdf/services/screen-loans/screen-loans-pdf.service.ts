@@ -13,19 +13,21 @@ type ScreenLoanPrintItem = {
   assetId: number;
   borrowerFirstName: string;
   borrowerLastName: string;
-  borrowerDepartment: string | null;
   loanDate: Date;
   expectedReturnDate: Date;
   returnedAt: Date | null;
   note: string | null;
   createdAt: Date;
+  department: { id: number; name: string } | null;
   asset: {
     id: number;
     inventoryNumber: string;
-    type: string;
-    brand: string;
+    serialNumber: string | null;
     model: string;
     status: string;
+    category: { id: number; name: string };
+    materialType: { id: number; name: string };
+    brand: { id: number; name: string };
   };
 };
 
@@ -441,7 +443,7 @@ export class ScreenLoansPdfService {
       ${this.infoCell('Identifiant emprunt', String(loan.id))}
       ${this.infoCell('Etat emprunt', this.statusBadge(status), true)}
       ${this.infoCell('Emprunteur', this.borrowerFullName(loan))}
-      ${this.infoCell('Direction', loan.borrowerDepartment ?? 'N/A')}
+      ${this.infoCell('Direction', loan.department?.name ?? 'N/A')}
       ${this.infoCell('Date pret', this.formatDateTime(loan.loanDate))}
       ${this.infoCell('Retour prevu', this.formatDateTime(loan.expectedReturnDate))}
       ${this.infoCell('Retour effectif', this.formatDateTime(loan.returnedAt))}
@@ -453,8 +455,8 @@ export class ScreenLoansPdfService {
     <div class="section-title">Materiel emprunte</div>
     <div class="grid">
       ${this.infoCell("Numero d'inventaire", loan.asset.inventoryNumber)}
-      ${this.infoCell('Type', loan.asset.type)}
-      ${this.infoCell('Marque / Modele', `${loan.asset.brand} / ${loan.asset.model}`)}
+      ${this.infoCell('Type', loan.asset.materialType.name)}
+      ${this.infoCell('Marque / Modele', `${loan.asset.brand.name} / ${loan.asset.model}`)}
       ${this.infoCell('Statut actuel du materiel', loan.asset.status.replace(/_/g, ' '))}
     </div>
   </div>
@@ -518,9 +520,9 @@ export class ScreenLoansPdfService {
   <td class="num">${index}</td>
   <td class="num">${loan.id > 0 ? loan.id : '-'}</td>
   <td>${this.escapeHtml(loan.asset.inventoryNumber)}</td>
-  <td>${this.escapeHtml(`${loan.asset.type} - ${loan.asset.brand} ${loan.asset.model}`)}</td>
+  <td>${this.escapeHtml(`${loan.asset.materialType.name} - ${loan.asset.brand.name} ${loan.asset.model}`)}</td>
   <td>${this.escapeHtml(this.borrowerFullName(loan))}</td>
-  <td>${this.escapeHtml(loan.borrowerDepartment ?? 'N/A')}</td>
+  <td>${this.escapeHtml(loan.department?.name ?? 'N/A')}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.loanDate)) : '-'}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.expectedReturnDate)) : '-'}</td>
   <td class="center">${loan.id > 0 ? this.escapeHtml(this.formatDate(loan.returnedAt)) : '-'}</td>
@@ -634,19 +636,21 @@ export class ScreenLoansPdfService {
       assetId: 0,
       borrowerFirstName: '',
       borrowerLastName: '-',
-      borrowerDepartment: '-',
       loanDate: new Date(0),
       expectedReturnDate: new Date(0),
       returnedAt: null,
       note: 'Aucun emprunt enregistre.',
       createdAt: new Date(0),
+      department: null,
       asset: {
         id: 0,
         inventoryNumber: '-',
-        type: '-',
-        brand: '-',
+        serialNumber: null,
         model: '-',
         status: '-',
+        category: { id: 0, name: '-' },
+        materialType: { id: 0, name: '-' },
+        brand: { id: 0, name: '-' },
       },
     };
   }

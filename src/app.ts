@@ -8,6 +8,13 @@ import { authenticate } from './modules/auth/auth.middleware';
 import { stocksModule } from './modules/stocks/stocks.module';
 import { suppliersModule } from './modules/suppliers/suppliers.module';
 import { materialTypesModule } from './modules/material-types/material-types.module';
+import { departmentsModule } from './modules/departments/departments.module';
+import { categoriesModule } from './modules/categories/categories.module';
+import { brandsModule } from './modules/brands/brands.module';
+import { locationsModule } from './modules/locations/locations.module';
+import { maintenancesModule } from './modules/maintenances/maintenances.module';
+import { attachmentsModule } from './modules/attachments/attachments.module';
+import { movementsModule } from './modules/movements/movements.module';
 import { assignmentsModule } from './modules/assignments/assignments.module';
 import { incidentsModule } from './modules/incidents/incidents.module';
 import { workshopModule } from './modules/workshop/workshop.module';
@@ -103,6 +110,13 @@ app.use('/api/dashboard', authenticate, dashboardModule.router);
 app.use('/api/screen-loans', authenticate, screenLoansModule.router);
 app.use('/api/suppliers', authenticate, suppliersModule.router);
 app.use('/api/material-types', authenticate, materialTypesModule.router);
+app.use('/api/departments', authenticate, departmentsModule.router);
+app.use('/api/categories', authenticate, categoriesModule.router);
+app.use('/api/brands', authenticate, brandsModule.router);
+app.use('/api/locations', authenticate, locationsModule.router);
+app.use('/api/maintenances', authenticate, maintenancesModule.router);
+app.use('/api/attachments', authenticate, attachmentsModule.router);
+app.use('/api/movements', authenticate, movementsModule.router);
 
 
 

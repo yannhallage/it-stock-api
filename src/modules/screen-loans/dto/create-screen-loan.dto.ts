@@ -2,7 +2,7 @@ export interface CreateScreenLoanDto {
   assetId: number;
   borrowerFirstName: string;
   borrowerLastName: string;
-  borrowerDepartment?: string;
+  departmentId?: number;
   loanDate: Date;
   expectedReturnDate: Date;
   note?: string;
@@ -38,8 +38,11 @@ export const validateCreateScreenLoanDto = (
     errors.push("Le prénom de l'emprunteur (borrowerFirstName) ne peut pas être vide.");
   }
 
-  if (body.borrowerDepartment != null && typeof body.borrowerDepartment !== 'string') {
-    errors.push("La direction de l'emprunteur (borrowerDepartment) doit être une chaîne de caractères.");
+  if (body.departmentId != null && body.departmentId !== '') {
+    const parsed = parseInt(String(body.departmentId), 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      errors.push("La direction de l'emprunteur (departmentId) doit être un entier strictement positif.");
+    }
   }
 
   if (body.note != null && typeof body.note !== 'string') {
@@ -85,9 +88,9 @@ export const validateCreateScreenLoanDto = (
       assetId: parseInt(String(body.assetId), 10),
       borrowerFirstName: String(body.borrowerFirstName).trim(),
       borrowerLastName: String(body.borrowerLastName).trim(),
-      borrowerDepartment:
-        typeof body.borrowerDepartment === 'string' && body.borrowerDepartment.trim().length > 0
-          ? body.borrowerDepartment.trim()
+      departmentId:
+        body.departmentId != null && body.departmentId !== ''
+          ? parseInt(String(body.departmentId), 10)
           : undefined,
       loanDate: loanDate!,
       expectedReturnDate: expectedReturnDate!,
@@ -98,4 +101,3 @@ export const validateCreateScreenLoanDto = (
     },
   };
 };
-

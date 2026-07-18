@@ -4,6 +4,12 @@ import { AssetStatus, HistoryEventType, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateScreenLoanDto } from './dto/create-screen-loan.dto';
 import { ScreenLoanFilterDto } from './dto/filter-screen-loans.dto';
+import { assetSelect } from '../../prisma/asset-select';
+
+const screenLoanInclude = {
+  department: { select: { id: true, name: true } },
+  asset: { select: assetSelect },
+} as const;
 
 export class ScreenLoansService {
   async createLoan(data: CreateScreenLoanDto) {
@@ -47,7 +53,7 @@ export class ScreenLoansService {
             assetId: data.assetId,
             borrowerFirstName: data.borrowerFirstName,
             borrowerLastName: data.borrowerLastName,
-            borrowerDepartment: data.borrowerDepartment,
+            departmentId: data.departmentId,
             loanDate: data.loanDate,
             expectedReturnDate: data.expectedReturnDate,
             note: data.note,
@@ -69,7 +75,7 @@ export class ScreenLoansService {
               screenLoanId: created.id,
               borrowerFirstName: created.borrowerFirstName,
               borrowerLastName: created.borrowerLastName,
-              borrowerDepartment: created.borrowerDepartment,
+              departmentId: created.departmentId,
               note: created.note,
             },
           },
@@ -77,18 +83,7 @@ export class ScreenLoansService {
 
         return tx.screenLoan.findUnique({
           where: { id: created.id },
-          include: {
-            asset: {
-              select: {
-                id: true,
-                inventoryNumber: true,
-                type: true,
-                brand: true,
-                model: true,
-                status: true,
-              },
-            },
-          },
+          include: screenLoanInclude,
         });
       });
 
@@ -101,6 +96,15 @@ export class ScreenLoansService {
           'SCREEN_LOAN_VALIDATION_ERROR',
         );
       }
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new HttpError(
+          400,
+          'Le département fourni est invalide.',
+          'SCREEN_LOAN_REFERENCE_ERROR',
+        );
+      }
+
       throw error;
     }
   }
@@ -108,7 +112,7 @@ export class ScreenLoansService {
   async listLoans(filters: ScreenLoanFilterDto) {
     logger.debug({ filters }, '[ScreenLoansService] Listing emprunts matériel');
 
-    const where: any = {};
+    const where: Prisma.ScreenLoanWhereInput = {};
 
     if (filters.borrowerName) {
       where.OR = [
@@ -126,18 +130,7 @@ export class ScreenLoansService {
     const loans = await prisma.screenLoan.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: screenLoanInclude,
     });
 
     return loans;
@@ -156,18 +149,7 @@ export class ScreenLoansService {
 
     const loan = await prisma.screenLoan.findUnique({
       where: { id },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            inventoryNumber: true,
-            type: true,
-            brand: true,
-            model: true,
-            status: true,
-          },
-        },
-      },
+      include: screenLoanInclude,
     });
 
     if (!loan) {
@@ -223,22 +205,10 @@ export class ScreenLoansService {
 
       return tx.screenLoan.findUnique({
         where: { id },
-        include: {
-          asset: {
-            select: {
-              id: true,
-              inventoryNumber: true,
-              type: true,
-              brand: true,
-              model: true,
-              status: true,
-            },
-          },
-        },
+        include: screenLoanInclude,
       });
     });
 
     return updated;
   }
 }
-

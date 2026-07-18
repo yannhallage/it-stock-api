@@ -35,7 +35,7 @@ export class ScreenLoansController {
    *               assetId: { type: integer }
    *               borrowerFirstName: { type: string }
    *               borrowerLastName: { type: string }
-   *               borrowerDepartment: { type: string }
+   *               departmentId: { type: integer }
    *               loanDate: { type: string, format: date-time }
    *               expectedReturnDate: { type: string, format: date-time }
    *               note: { type: string }

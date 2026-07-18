@@ -1,7 +1,7 @@
 export interface CreateIncidentDto {
   description: string;
   reportedAt: Date;
-  department: string;
+  departmentId: number;
 }
 
 export const validateCreateIncidentDto = (
@@ -27,8 +27,13 @@ export const validateCreateIncidentDto = (
     }
   }
 
-  if (typeof body.department !== 'string' || body.department.trim().length === 0) {
-    errors.push('Le département est requis et ne doit pas être vide.');
+  if (body.departmentId == null) {
+    errors.push('Le département (departmentId) est requis.');
+  } else {
+    const parsed = parseInt(String(body.departmentId), 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      errors.push('Le département (departmentId) doit être un entier strictement positif.');
+    }
   }
 
   if (errors.length > 0) {
@@ -38,7 +43,7 @@ export const validateCreateIncidentDto = (
   const value: CreateIncidentDto = {
     description: body.description.trim(),
     reportedAt: parsedDate!,
-    department: body.department.trim(),
+    departmentId: parseInt(String(body.departmentId), 10),
   };
 
   return { value };

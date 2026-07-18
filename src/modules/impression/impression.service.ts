@@ -45,7 +45,10 @@ export class ImpressionService {
     const summary: string[] = [];
 
     if (filters.search) summary.push(`Recherche: ${filters.search}`);
-    if (filters.type) summary.push(`Type: ${filters.type}`);
+    if (filters.materialTypeId) summary.push(`Type materiel: #${filters.materialTypeId}`);
+    if (filters.categoryId) summary.push(`Categorie: #${filters.categoryId}`);
+    if (filters.brandId) summary.push(`Marque: #${filters.brandId}`);
+    if (filters.departmentId) summary.push(`Departement: #${filters.departmentId}`);
     if (filters.status) summary.push(`Etat: ${filters.status.replace(/_/g, ' ')}`);
 
     if (filters.entryDateFrom || filters.entryDateTo) {

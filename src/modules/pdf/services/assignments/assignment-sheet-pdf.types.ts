@@ -1,19 +1,31 @@
 export type AssignmentSheetPrintPayload = Array<{
   id: number;
   assetId: number;
-  department: string;
-  user: unknown;
+  userId: string;
+  departmentId: number;
   startDate: Date;
   endDate: Date | null;
+  note: string | null;
   createdAt: Date;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  department: {
+    id: number;
+    name: string;
+  };
   asset: {
     id: number;
     inventoryNumber: string;
-    serial_number: string | null;
-    type: string;
-    brand: string;
+    serialNumber: string | null;
     model: string;
     status: string;
+    category: { id: number; name: string };
+    materialType: { id: number; name: string };
+    brand: { id: number; name: string };
   };
 }>;
 
