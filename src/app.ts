@@ -62,6 +62,7 @@ app.use(
         'http://127.0.0.1:5173',
         'https://assnat-stock.vercel.app',
         'https://assnat-control.vercel.app',
+        'https://asset-it-control.vercel.app',
         'https://api-control-chi.vercel.app',
         'http://localhost:3000',
         'http://81.0.220.161:8080',
