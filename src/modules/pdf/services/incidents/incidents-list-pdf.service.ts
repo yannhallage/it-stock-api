@@ -227,7 +227,7 @@ export class IncidentsListPdfService {
 <th>Type</th>
 <th>Marque / Modèle</th>
 <th>Direction</th>
-<th>Utilisateur</th>
+<th>Employé</th>
 <th>Signalement</th>
 <th>Etat incident</th>
 <th>Etat materiel</th>

@@ -21,10 +21,10 @@ export type IncidentsListPrintPayload = Array<{
     materialType: { id: number; name: string };
     brand: { id: number; name: string };
     assignments: Array<{
-      user: {
+      employee: {
         firstName: string;
         lastName: string;
-        email: string;
+        email: string | null;
       };
     }>;
   };

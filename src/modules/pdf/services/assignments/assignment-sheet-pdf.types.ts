@@ -1,17 +1,17 @@
 export type AssignmentSheetPrintPayload = Array<{
   id: number;
   assetId: number;
-  userId: string;
+  employeeId: string;
   departmentId: number;
   startDate: Date;
   endDate: Date | null;
   note: string | null;
   createdAt: Date;
-  user: {
+  employee: {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
+    email: string | null;
   };
   department: {
     id: number;
@@ -53,7 +53,7 @@ export type AssignmentSheetPrintView = {
       status: string;
     }>;
     totals: {
-      users: number;
+      employees: number;
       active: number;
       globalStatus: string;
     };

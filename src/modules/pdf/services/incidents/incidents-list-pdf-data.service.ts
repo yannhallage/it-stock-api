@@ -26,13 +26,13 @@ const truncateDescription = (text: string): string => {
   return `${t.slice(0, MAX_DESCRIPTION_LEN)}…`;
 };
 
-const formatBeneficiaire = (user: {
+const formatBeneficiaire = (employee: {
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
 }): string => {
-  const fullName = `${user.firstName} ${user.lastName}`.trim();
-  return fullName || user.email || 'N/A';
+  const fullName = `${employee.firstName} ${employee.lastName}`.trim();
+  return fullName || employee.email || 'N/A';
 };
 
 export class IncidentsListPdfDataService {
@@ -47,7 +47,7 @@ export class IncidentsListPdfDataService {
       totalIncidents: payload.length,
       incidents: payload.map((row, index) => {
         const active = row.asset.assignments[0];
-        const utilisateur = active ? formatBeneficiaire(active.user) : 'N/A';
+        const utilisateur = active ? formatBeneficiaire(active.employee) : 'N/A';
 
         return {
           index: index + 1,

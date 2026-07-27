@@ -92,17 +92,19 @@ export class AssignmentsController {
    *           schema:
    *             type: object
    *             required:
-   *               - department
-   *               - user
+   *               - departmentId
+   *               - employeeId
    *               - startDate
    *             properties:
-   *               department:
+   *               departmentId:
+   *                 type: integer
+   *               employeeId:
    *                 type: string
-   *               user:
-   *                 type: object
    *               startDate:
    *                 type: string
    *                 format: date-time
+   *               note:
+   *                 type: string
    *     responses:
    *       201:
    *         description: Affectation créée (inclut les HistoryEvent créés pour l'action)

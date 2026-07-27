@@ -76,7 +76,7 @@ export class IncidentsService {
               orderBy: { startDate: 'desc' },
               take: 1,
               select: {
-                user: { select: { firstName: true, lastName: true, email: true } },
+                employee: { select: { firstName: true, lastName: true, email: true } },
               },
             },
           },

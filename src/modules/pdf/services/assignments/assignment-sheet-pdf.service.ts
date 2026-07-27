@@ -277,7 +277,7 @@ ${content}
     </div>
 
     <div class="section">
-      <div class="section-title">UTILISATEURS BENEFICIAIRES</div>
+      <div class="section-title">EMPLOYES BENEFICIAIRES</div>
       <table>
         <thead>
           <tr>
@@ -299,7 +299,7 @@ ${content}
   <div class="bottom-content">
     <div class="bottom">
       <div class="status-box">
-        <div><span>UTILISATEURS</span><span>${sheet.totals.users}</span></div>
+        <div><span>EMPLOYES</span><span>${sheet.totals.employees}</span></div>
         <div><span>ACTIFS</span><span>${sheet.totals.active}</span></div>
         <div class="highlight"><span>STATUT</span><span>${this.escapeHtml(sheet.totals.globalStatus)}</span></div>
       </div>
@@ -361,7 +361,7 @@ ${content}
       },
       beneficiaries: [],
       totals: {
-        users: 0,
+        employees: 0,
         active: 0,
         globalStatus: 'INACTIF',
       },

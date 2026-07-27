@@ -1,5 +1,5 @@
 export interface CreateAssignmentDto {
-  userId: string;
+  employeeId: string;
   departmentId: number;
   startDate: Date;
   note?: string;
@@ -10,8 +10,8 @@ export const validateCreateAssignmentDto = (
 ): { value?: CreateAssignmentDto; errors?: string[] } => {
   const errors: string[] = [];
 
-  if (typeof body.userId !== 'string' || body.userId.trim().length === 0) {
-    errors.push("L'identifiant utilisateur (userId) est requis et ne doit pas être vide.");
+  if (typeof body.employeeId !== 'string' || body.employeeId.trim().length === 0) {
+    errors.push("L'identifiant employé (employeeId) est requis et ne doit pas être vide.");
   }
 
   if (body.departmentId == null) {
@@ -44,7 +44,7 @@ export const validateCreateAssignmentDto = (
   }
 
   const value: CreateAssignmentDto = {
-    userId: body.userId.trim(),
+    employeeId: body.employeeId.trim(),
     departmentId: parseInt(String(body.departmentId), 10),
     startDate: parsedDate!,
     note:

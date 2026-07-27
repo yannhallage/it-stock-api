@@ -78,7 +78,7 @@ export class ImpressionService {
     if (filters.categoryId) summary.push(`Categorie: #${filters.categoryId}`);
     if (filters.brandId) summary.push(`Marque: #${filters.brandId}`);
     if (filters.departmentId) summary.push(`Direction: #${filters.departmentId}`);
-    if (filters.userId) summary.push(`Utilisateur: ${filters.userId}`);
+    if (filters.employeeId) summary.push(`Employé: ${filters.employeeId}`);
     if (filters.status) summary.push(`Etat: ${filters.status.replace(/_/g, ' ')}`);
     if (filters.warrantyExpired) summary.push('Garantie expiree');
     if (filters.minAgeYears) summary.push(`Age >= ${filters.minAgeYears} ans`);

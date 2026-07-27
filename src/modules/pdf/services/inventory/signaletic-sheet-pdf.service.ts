@@ -15,7 +15,7 @@ export type SignaleticAsset = {
   brand: { name: string };
   location: { name: string } | null;
   currentAssignment: {
-    user: { firstName: string; lastName: string };
+    employee: { firstName: string; lastName: string };
     department: { name: string };
     startDate?: Date;
   } | null;
@@ -63,7 +63,7 @@ export class SignaleticSheetPdfService {
 
   private buildSheet(asset: SignaleticAsset, logoSrc: string): string {
     const user = asset.currentAssignment
-      ? `${asset.currentAssignment.user.lastName} ${asset.currentAssignment.user.firstName}`
+      ? `${asset.currentAssignment.employee.lastName} ${asset.currentAssignment.employee.firstName}`
       : 'Non affecté';
     const direction = asset.currentAssignment?.department.name ?? '—';
     const printedAt = this.formatDate(new Date());

@@ -7,7 +7,7 @@ import { AssignmentFilterDto } from './dto/filter-assignments.dto';
 import { assetSelect } from '../../prisma/asset-select';
 
 const assignmentInclude = {
-  user: { select: { id: true, firstName: true, lastName: true, email: true } },
+  employee: { select: { id: true, firstName: true, lastName: true, email: true } },
   department: { select: { id: true, name: true } },
   asset: { select: assetSelect },
 } as const;
@@ -49,7 +49,7 @@ export class AssignmentsService {
 
   async createAssignment(assetId: number, data: CreateAssignmentDto) {
     logger.info(
-      { assetId, userId: data.userId, departmentId: data.departmentId },
+      { assetId, employeeId: data.employeeId, departmentId: data.departmentId },
       '[AssignmentsService] Création dune affectation demandée',
     );
 
@@ -81,6 +81,22 @@ export class AssignmentsService {
           );
         }
 
+        const employee = await tx.employee.findFirst({
+          where: { id: data.employeeId, deletedAt: null },
+        });
+
+        if (!employee) {
+          logger.warn(
+            { employeeId: data.employeeId },
+            '[AssignmentsService] Employé non trouvé pour affectation',
+          );
+          throw new HttpError(
+            400,
+            "L'employé fourni est invalide ou a été supprimé.",
+            'ASSIGNMENT_EMPLOYEE_INVALID',
+          );
+        }
+
         const activeAssignment = await tx.assignment.findFirst({
           where: {
             assetId,
@@ -102,7 +118,7 @@ export class AssignmentsService {
         const assignment = await tx.assignment.create({
           data: {
             assetId,
-            userId: data.userId,
+            employeeId: data.employeeId,
             departmentId: data.departmentId,
             startDate: data.startDate,
             note: data.note,
@@ -124,7 +140,7 @@ export class AssignmentsService {
             type: HistoryEventType.ASSIGNMENT_CREATED,
             payload: {
               assignmentId: assignment.id,
-              userId: assignment.userId,
+              employeeId: assignment.employeeId,
               departmentId: assignment.departmentId,
               startDate: assignment.startDate.toISOString?.() ?? assignment.startDate,
               note: assignment.note,
@@ -186,7 +202,7 @@ export class AssignmentsService {
         logger.warn({ assetId, error }, '[AssignmentsService] Référence invalide lors de la création');
         throw new HttpError(
           400,
-          "L'utilisateur ou le département fourni est invalide.",
+          "L'employé ou le département fourni est invalide.",
           'ASSIGNMENT_REFERENCE_ERROR',
         );
       }
@@ -299,7 +315,7 @@ export class AssignmentsService {
             type: HistoryEventType.ASSIGNMENT_ENDED,
             payload: {
               assignmentId: assignment.id,
-              userId: assignment.userId,
+              employeeId: assignment.employeeId,
               departmentId: assignment.departmentId,
               startDate: assignment.startDate.toISOString?.() ?? assignment.startDate,
               endDate: endedAt.toISOString(),
