@@ -1,23 +1,23 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { IncidentsListPrintView } from './incidents-list-pdf.types';
+import { AssignmentsListPrintView } from './assignments-list-pdf.types';
 import { launchPdfBrowser } from '../shared/pdf-browser';
 
 const LOCAL_LOGO_PATH = process.env.LOGO_PATH || path.resolve(process.cwd(), 'src/modules/pdf/image.png');
 
-type IncidentRow = IncidentsListPrintView['incidents'][number];
+type AssignmentRow = AssignmentsListPrintView['assignments'][number];
 
 type Metrics = {
   total: number;
-  ouvert: number;
-  clos: number;
+  active: number;
+  closed: number;
   directions: number;
   materiels: number;
 };
 
-export class IncidentsListPdfService {
-  async generateIncidentsListSheet(data: IncidentsListPrintView): Promise<Buffer> {
-    const metrics = this.computeMetrics(data.incidents);
+export class AssignmentsListPdfService {
+  async generateAssignmentsListSheet(data: AssignmentsListPrintView): Promise<Buffer> {
+    const metrics = this.computeMetrics(data.assignments);
     const logoSrc = await this.getLogoSrc();
     const html = this.buildHtml(data, metrics, logoSrc);
 
@@ -29,11 +29,12 @@ export class IncidentsListPdfService {
 
       const pdf = await page.pdf({
         format: 'A4',
+        landscape: true,
         printBackground: true,
         margin: {
-          top: '14mm',
+          top: '12mm',
           right: '10mm',
-          bottom: '18mm',
+          bottom: '16mm',
           left: '10mm',
         },
       });
@@ -44,8 +45,8 @@ export class IncidentsListPdfService {
     }
   }
 
-  private buildHtml(data: IncidentsListPrintView, metrics: Metrics, logoSrc: string): string {
-    const rows = (data.incidents.length ? data.incidents : [this.emptyRow()])
+  private buildHtml(data: AssignmentsListPrintView, metrics: Metrics, logoSrc: string): string {
+    const rows = (data.assignments.length ? data.assignments : [this.emptyRow()])
       .map((row, index) => this.buildRow(index + 1, row))
       .join('');
 
@@ -54,20 +55,17 @@ export class IncidentsListPdfService {
 <head>
 <meta charset="utf-8" />
 <style>
-  @page { size: A4; margin: 14mm 10mm; }
+  @page { size: A4 landscape; margin: 12mm 10mm; }
 
   body {
     font-family: "Times New Roman", serif;
     font-size: 11px;
     color: #000;
     margin: 0;
-    padding-bottom: 40px;
+    padding-bottom: 36px;
   }
 
-  .header {
-    text-align: center;
-    margin-bottom: 10px;
-  }
+  .header { text-align: center; margin-bottom: 10px; }
 
   .header-row {
     display: grid;
@@ -76,42 +74,26 @@ export class IncidentsListPdfService {
     column-gap: 16px;
   }
 
-  .header-left,
-  .header-right {
+  .header-left, .header-right {
     font-weight: bold;
     font-size: 13px;
     line-height: 1.5;
   }
 
-  .header-left {
-    text-align: left;
-  }
+  .header-left { text-align: left; }
+  .header-right { text-align: right; }
 
-  .header-right {
-    text-align: right;
-  }
+  .logo-wrap { text-align: center; }
+  .logo { width: 70px; height: 70px; object-fit: contain; }
 
-  .logo-wrap {
-    text-align: center;
-  }
-
-  .logo {
-    width: 70px;
-    height: 70px;
-    object-fit: contain;
-  }
-
-  .meta {
-    font-size: 11px;
-    margin-top: 6px;
-  }
+  .meta { font-size: 11px; margin-top: 6px; }
 
   .title {
     text-align: center;
     font-weight: bold;
     text-decoration: underline;
     font-size: 15px;
-    margin: 15px 0;
+    margin: 12px 0;
   }
 
   .kpis {
@@ -126,14 +108,8 @@ export class IncidentsListPdfService {
     text-align: center;
   }
 
-  .kpi-label {
-    font-size: 10px;
-  }
-
-  .kpi-value {
-    font-size: 18px;
-    font-weight: bold;
-  }
+  .kpi-label { font-size: 10px; }
+  .kpi-value { font-size: 18px; font-weight: bold; }
 
   table {
     width: 100%;
@@ -152,13 +128,9 @@ export class IncidentsListPdfService {
     font-size: 10px;
   }
 
-  td {
-    font-size: 10px;
-  }
+  td { font-size: 10px; }
 
-  .num, .center {
-    text-align: center;
-  }
+  .num, .center { text-align: center; }
 
   .status {
     padding: 2px 5px;
@@ -166,8 +138,8 @@ export class IncidentsListPdfService {
     border: 1px solid #000;
   }
 
-  .inc_OUVERT { background: #fff3cd; }
-  .inc_CLOS { background: #e6f4ea; }
+  .asg_ACTIF { background: #e6f4ea; }
+  .asg_CLOTURE { background: #f3f4f6; }
 
   .footer {
     position: fixed;
@@ -182,7 +154,6 @@ export class IncidentsListPdfService {
   }
 </style>
 </head>
-
 <body>
 
 <div class="header">
@@ -191,20 +162,15 @@ export class IncidentsListPdfService {
       REPUBLIQUE DE CÔTE D’IVOIRE<br>
       Union – Discipline – Travail
     </div>
-
     <div class="logo-wrap">
-      <img src="${logoSrc}" class="logo" />
+      ${logoSrc ? `<img src="${logoSrc}" class="logo" />` : ''}
     </div>
-
     <div class="header-right">
       ASSEMBLEE NATIONALE<br>
       DIRECTION DES SYSTEMES D’INFORMATION
     </div>
   </div>
-
-  <div class="meta">
-    Date: ${this.formatDate(data.generatedAt)}
-  </div>
+  <div class="meta">Date: ${this.formatDate(data.generatedAt)}</div>
 </div>
 
 <div class="title">${this.escapeHtml(data.title)}</div>
@@ -212,8 +178,8 @@ export class IncidentsListPdfService {
 <table class="kpis">
 <tr>
 <td><div class="kpi-label">TOTAL</div><div class="kpi-value">${metrics.total}</div></td>
-<td><div class="kpi-label">OUVERT</div><div class="kpi-value">${metrics.ouvert}</div></td>
-<td><div class="kpi-label">CLOS</div><div class="kpi-value">${metrics.clos}</div></td>
+<td><div class="kpi-label">ACTIVES</div><div class="kpi-value">${metrics.active}</div></td>
+<td><div class="kpi-label">CLOTUREES</div><div class="kpi-value">${metrics.closed}</div></td>
 <td><div class="kpi-label">DIRECTIONS</div><div class="kpi-value">${metrics.directions}</div></td>
 <td><div class="kpi-label">MATERIELS</div><div class="kpi-value">${metrics.materiels}</div></td>
 </tr>
@@ -222,19 +188,18 @@ export class IncidentsListPdfService {
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>Inventaire</th>
-<th>Type</th>
-<th>Marque / Modèle</th>
-<th>Direction</th>
-<th>Employé</th>
-<th>Signalement</th>
-<th>Etat incident</th>
-<th>Etat materiel</th>
-<th>Description</th>
+<th style="width:3%">#</th>
+<th style="width:11%">Inventaire</th>
+<th style="width:10%">Type</th>
+<th style="width:16%">Marque / Modèle</th>
+<th style="width:10%">Etat materiel</th>
+<th style="width:14%">Direction</th>
+<th style="width:14%">Employé</th>
+<th style="width:9%">Début</th>
+<th style="width:9%">Fin</th>
+<th style="width:7%">Statut</th>
 </tr>
 </thead>
-
 <tbody>
 ${rows}
 </tbody>
@@ -242,19 +207,15 @@ ${rows}
 
 <div class="footer">
   <span>${this.escapeHtml(data.printedAt)}</span>
+  <span>Total: ${data.totalAssignments}</span>
 </div>
 
 </body>
 </html>`;
   }
 
-  private buildRow(index: number, row: IncidentRow): string {
-    const incClass =
-      row.incidentStatus === 'Ouvert'
-        ? 'inc_OUVERT'
-        : row.incidentStatus === 'Clos'
-          ? 'inc_CLOS'
-          : '';
+  private buildRow(index: number, row: AssignmentRow): string {
+    const statusClass = row.status === 'ACTIF' ? 'asg_ACTIF' : row.status === 'CLOTURE' ? 'asg_CLOTURE' : '';
 
     return `
 <tr>
@@ -262,28 +223,25 @@ ${rows}
 <td>${this.escapeHtml(row.inventoryNumber)}</td>
 <td>${this.escapeHtml(row.assetType)}</td>
 <td>${this.escapeHtml(row.brandModel)}</td>
-<td>${this.escapeHtml(row.department)}</td>
-<td>${this.escapeHtml(row.utilisateur)}</td>
-<td class="center">${row.inventoryNumber === '-' ? '-' : this.formatDate(row.reportedAtRaw)}</td>
-<td class="center">
-  <span class="status ${incClass}">${this.escapeHtml(row.incidentStatus)}</span>
-</td>
 <td class="center">${this.escapeHtml(row.assetStatus)}</td>
-<td>${this.escapeHtml(row.description)}</td>
+<td>${this.escapeHtml(row.department)}</td>
+<td>${this.escapeHtml(row.employee)}</td>
+<td class="center">${row.inventoryNumber === '-' ? '-' : this.formatDate(row.startDateRaw)}</td>
+<td class="center">${row.endDateRaw ? this.formatDate(row.endDateRaw) : '—'}</td>
+<td class="center"><span class="status ${statusClass}">${this.escapeHtml(row.status)}</span></td>
 </tr>`;
   }
 
-  private computeMetrics(rows: IncidentRow[]): Metrics {
-    const ouvert = rows.filter((r) => r.incidentStatus === 'Ouvert').length;
-    const clos = rows.filter((r) => r.incidentStatus === 'Clos').length;
-    const deptSet = new Set(rows.map((r) => r.department).filter(Boolean));
-    /** Distinct inventory numbers (one row = one incident; materiels = rows with real inventory). */
+  private computeMetrics(rows: AssignmentRow[]): Metrics {
+    const active = rows.filter((r) => r.status === 'ACTIF').length;
+    const closed = rows.filter((r) => r.status === 'CLOTURE').length;
+    const deptSet = new Set(rows.map((r) => r.department).filter((d) => d && d !== '-'));
     const invSet = new Set(rows.map((r) => r.inventoryNumber).filter((n) => n !== '-'));
 
     return {
       total: rows.length,
-      ouvert,
-      clos,
+      active,
+      closed,
       directions: deptSet.size,
       materiels: invSet.size,
     };
@@ -317,19 +275,20 @@ ${rows}
     )}/${date.getFullYear()}`;
   }
 
-  private emptyRow(): IncidentRow {
+  private emptyRow(): AssignmentRow {
     return {
       index: 0,
       inventoryNumber: '-',
       assetType: '-',
       brandModel: '-',
-      department: '-',
-      utilisateur: '-',
-      reportedAt: '-',
-      reportedAtRaw: new Date(0),
-      incidentStatus: '-',
       assetStatus: '-',
-      description: 'Aucune panne enregistree.',
+      department: '-',
+      employee: '-',
+      startDate: '-',
+      startDateRaw: new Date(0),
+      endDate: '-',
+      endDateRaw: null,
+      status: '-',
     };
   }
 }

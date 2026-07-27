@@ -14,7 +14,7 @@ const assetDetailInclude = {
   assignments: {
     orderBy: { startDate: 'desc' as const },
     include: {
-      user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      employee: { select: { id: true, firstName: true, lastName: true, email: true } },
       department: { select: { id: true, name: true } },
     },
   },
@@ -266,8 +266,8 @@ export class StocksService {
               some: {
                 endDate: null,
                 OR: [
-                  { user: { firstName: { contains: search, mode: 'insensitive' } } },
-                  { user: { lastName: { contains: search, mode: 'insensitive' } } },
+                  { employee: { firstName: { contains: search, mode: 'insensitive' } } },
+                  { employee: { lastName: { contains: search, mode: 'insensitive' } } },
                   { department: { name: { contains: search, mode: 'insensitive' } } },
                 ],
               },
@@ -288,11 +288,11 @@ export class StocksService {
       });
     }
 
-    if (filters.userId) {
+    if (filters.employeeId) {
       andConditions.push({
         assignments: {
           some: {
-            userId: filters.userId,
+            employeeId: filters.employeeId,
             endDate: null,
           },
         },
@@ -371,7 +371,7 @@ export class StocksService {
     T extends {
       assignments?: Array<{
         endDate: Date | null;
-        user: { id: string; firstName: string; lastName: string; email: string };
+        employee: { id: string; firstName: string; lastName: string; email: string | null };
         department: { id: number; name: string };
       }>;
     },
@@ -404,7 +404,7 @@ export class StocksService {
             take: 1,
             orderBy: { startDate: 'desc' },
             include: {
-              user: { select: { id: true, firstName: true, lastName: true, email: true } },
+              employee: { select: { id: true, firstName: true, lastName: true, email: true } },
               department: { select: { id: true, name: true } },
             },
           },

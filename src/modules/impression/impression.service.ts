@@ -8,6 +8,8 @@ import { StockAssetsPdfService } from '../pdf/services/assets/stock-assets-pdf.s
 import { AssetFilterDto } from '../stocks/dto/filter-assets.dto';
 import { AssignmentSheetPdfDataService } from '../pdf/services/assignments/assignment-sheet-pdf-data.service';
 import { AssignmentSheetPdfService } from '../pdf/services/assignments/assignment-sheet-pdf.service';
+import { AssignmentsListPdfDataService } from '../pdf/services/assignments/assignments-list-pdf-data.service';
+import { AssignmentsListPdfService } from '../pdf/services/assignments/assignments-list-pdf.service';
 import { SuppliersPdfDataService } from '../pdf/services/suppliers/suppliers-pdf-data.service';
 import { SuppliersPdfService } from '../pdf/services/suppliers/suppliers-pdf.service';
 import { IncidentsListPdfDataService } from '../pdf/services/incidents/incidents-list-pdf-data.service';
@@ -29,6 +31,8 @@ export class ImpressionService {
   private readonly stockAssetsPdfService = new StockAssetsPdfService();
   private readonly assignmentSheetPdfDataService = new AssignmentSheetPdfDataService();
   private readonly assignmentSheetPdfService = new AssignmentSheetPdfService();
+  private readonly assignmentsListPdfDataService = new AssignmentsListPdfDataService();
+  private readonly assignmentsListPdfService = new AssignmentsListPdfService();
   private readonly suppliersPdfDataService = new SuppliersPdfDataService();
   private readonly suppliersPdfService = new SuppliersPdfService();
   private readonly incidentsListPdfDataService = new IncidentsListPdfDataService();
@@ -78,7 +82,7 @@ export class ImpressionService {
     if (filters.categoryId) summary.push(`Categorie: #${filters.categoryId}`);
     if (filters.brandId) summary.push(`Marque: #${filters.brandId}`);
     if (filters.departmentId) summary.push(`Direction: #${filters.departmentId}`);
-    if (filters.userId) summary.push(`Utilisateur: ${filters.userId}`);
+    if (filters.employeeId) summary.push(`Employé: ${filters.employeeId}`);
     if (filters.status) summary.push(`Etat: ${filters.status.replace(/_/g, ' ')}`);
     if (filters.warrantyExpired) summary.push('Garantie expiree');
     if (filters.minAgeYears) summary.push(`Age >= ${filters.minAgeYears} ans`);
@@ -145,7 +149,7 @@ export class ImpressionService {
   }
 
   async printAssigment(
-    assignmentId: number,
+    assignmentId?: number,
     requester?: { id: string; email: string },
   ): Promise<Buffer> {
     if (!requester?.id || !requester?.email) {
@@ -156,14 +160,22 @@ export class ImpressionService {
       );
     }
 
-    const assignment = await this.assignmentsService.getAssignmentForPrintById(assignmentId);
-    if (!assignment) {
-      throw new HttpError(404, 'Affectation non trouvee.', 'ASSIGNMENT_NOT_FOUND');
+    // Une affectation → fiche individuelle
+    if (typeof assignmentId === 'number') {
+      const assignment =
+        await this.assignmentsService.getAssignmentForPrintById(assignmentId);
+      if (!assignment) {
+        throw new HttpError(404, 'Affectation non trouvee.', 'ASSIGNMENT_NOT_FOUND');
+      }
+
+      const printData = this.assignmentSheetPdfDataService.buildAssignmentSheet([assignment]);
+      return this.assignmentSheetPdfService.generateAssignmentSheet(printData);
     }
 
-    const assignments = [assignment];
-    const printData = this.assignmentSheetPdfDataService.buildAssignmentSheet(assignments);
-    return this.assignmentSheetPdfService.generateAssignmentSheet(printData);
+    // Sans id → liste tabulaire de toutes les affectations
+    const assignments = await this.assignmentsService.listAssignmentsForPrint();
+    const printData = this.assignmentsListPdfDataService.buildAssignmentsListSheet(assignments);
+    return this.assignmentsListPdfService.generateAssignmentsListSheet(printData);
   }
 
   async printSuppliers(): Promise<Buffer> {

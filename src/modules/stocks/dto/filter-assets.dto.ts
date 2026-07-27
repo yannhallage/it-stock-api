@@ -21,7 +21,7 @@ export interface AssetFilterDto {
   search?: string;
   status?: AssetStatus;
   departmentId?: number;
-  userId?: string;
+  employeeId?: string;
   materialTypeId?: number;
   materialTypeIds?: number[];
   categoryId?: number;
@@ -139,6 +139,7 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
   const search = readText(query.search) ?? readText(query.q);
   const computer = readText(query.computer);
   const userId = readText(query.userId);
+  const employeeId = readText(query.employeeId) ?? userId;
   const departmentId = readInt(query.departmentId, 'departmentId', errors);
   const materialTypeId = readInt(query.materialTypeId, 'materialTypeId', errors);
   const materialTypeIds = readIntList(
@@ -214,7 +215,7 @@ export const validateAssetFilterDto = (query: any): { value: AssetFilterDto; err
       search,
       status,
       departmentId,
-      userId,
+      employeeId,
       materialTypeId,
       materialTypeIds,
       categoryId,

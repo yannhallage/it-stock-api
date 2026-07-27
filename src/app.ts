@@ -11,6 +11,7 @@ import { materialTypesModule } from './modules/material-types/material-types.mod
 import { departmentsModule } from './modules/departments/departments.module';
 import { categoriesModule } from './modules/categories/categories.module';
 import { brandsModule } from './modules/brands/brands.module';
+import { employeesModule } from './modules/employees/employees.module';
 import { locationsModule } from './modules/locations/locations.module';
 import { maintenancesModule } from './modules/maintenances/maintenances.module';
 import { attachmentsModule } from './modules/attachments/attachments.module';
@@ -114,6 +115,7 @@ app.use('/api/material-types', authenticate, materialTypesModule.router);
 app.use('/api/departments', authenticate, departmentsModule.router);
 app.use('/api/categories', authenticate, categoriesModule.router);
 app.use('/api/brands', authenticate, brandsModule.router);
+app.use('/api/employees', authenticate, employeesModule.router);
 app.use('/api/locations', authenticate, locationsModule.router);
 app.use('/api/maintenances', authenticate, maintenancesModule.router);
 app.use('/api/attachments', authenticate, attachmentsModule.router);

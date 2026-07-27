@@ -15,7 +15,7 @@ export type InventoryAssetPayload = Array<{
   supplier: { id: number; name: string } | null;
   location: { id: number; name: string } | null;
   currentAssignment: {
-    user: { firstName: string; lastName: string };
+    employee: { firstName: string; lastName: string };
     department: { id: number; name: string };
   } | null;
 }>;

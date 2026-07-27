@@ -30,11 +30,11 @@ export class AssignmentSheetPdfDataService {
         .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
         .map((assignment, index) => {
           const active = assignment.endDate == null;
-          const fullName = `${assignment.user.firstName} ${assignment.user.lastName}`.trim();
+          const fullName = `${assignment.employee.firstName} ${assignment.employee.lastName}`.trim();
 
           return {
             index: index + 1,
-            fullName: fullName || assignment.user.email,
+            fullName: fullName || assignment.employee.email || 'N/A',
             role: 'N/A',
             service: assignment.department.name,
             assignedAt: formatDateTime(assignment.startDate),
@@ -58,7 +58,7 @@ export class AssignmentSheetPdfDataService {
         },
         beneficiaries,
         totals: {
-          users: beneficiaries.length,
+          employees: beneficiaries.length,
           active: activeCount,
           globalStatus: activeCount > 0 ? 'EN SERVICE' : 'INACTIF',
         },

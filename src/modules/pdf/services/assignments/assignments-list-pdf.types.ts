@@ -1,4 +1,4 @@
-export type AssignmentSheetPrintPayload = Array<{
+export type AssignmentsListPrintPayload = Array<{
   id: number;
   assetId: number;
   employeeId: string;
@@ -29,33 +29,24 @@ export type AssignmentSheetPrintPayload = Array<{
   };
 }>;
 
-export type AssignmentSheetPrintView = {
+export type AssignmentsListPrintView = {
+  organizationName: string;
+  title: string;
   printedAt: string;
   generatedAt: Date;
-  sheets: Array<{
-    sheetNumber: string;
-    asset: {
-      inventoryNumber: string;
-      type: string;
-      brand: string;
-      model: string;
-      serialNumber: string;
-      statusLabel: string;
-      statusCode: string;
-    };
-    beneficiaries: Array<{
-      index: number;
-      fullName: string;
-      role: string;
-      service: string;
-      assignedAt: string;
-      assignedAtRaw: Date;
-      status: string;
-    }>;
-    totals: {
-      employees: number;
-      active: number;
-      globalStatus: string;
-    };
+  totalAssignments: number;
+  assignments: Array<{
+    index: number;
+    inventoryNumber: string;
+    assetType: string;
+    brandModel: string;
+    assetStatus: string;
+    department: string;
+    employee: string;
+    startDate: string;
+    startDateRaw: Date;
+    endDate: string;
+    endDateRaw: Date | null;
+    status: string;
   }>;
 };

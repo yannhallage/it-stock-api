@@ -29,7 +29,7 @@ type AssetDetailPdfPayload = {
   currentAssignment: {
     id: number;
     department: { id: number; name: string };
-    user: { firstName: string; lastName: string; email: string };
+    employee: { firstName: string; lastName: string; email: string | null };
     startDate: Date;
     endDate: Date | null;
     createdAt: Date;
@@ -381,11 +381,11 @@ export class AssetDetailPdfService {
       };
     }
 
-    const { user, department } = asset.currentAssignment;
-    const fullName = `${user.firstName} ${user.lastName}`.trim();
+    const { employee, department } = asset.currentAssignment;
+    const fullName = `${employee.firstName} ${employee.lastName}`.trim();
 
     return {
-      name: fullName || user.email,
+      name: fullName || employee.email || 'N/A',
       role: 'N/A',
       service: department.name,
       assignedAt: this.formatDateTime(asset.currentAssignment.startDate),
@@ -499,14 +499,16 @@ export class AssetDetailPdfService {
     }
 
     if (type === 'ASSIGNMENT_CREATED') {
-      const userId = this.readString(data, 'userId') ?? 'N/A';
+      const employeeId =
+        this.readString(data, 'employeeId') ?? this.readString(data, 'userId') ?? 'N/A';
       const departmentId = this.readString(data, 'departmentId') ?? 'N/A';
-      return `Affectation: utilisateur ${userId} / departement ${departmentId}`;
+      return `Affectation: employé ${employeeId} / departement ${departmentId}`;
     }
 
     if (type === 'ASSIGNMENT_ENDED') {
-      const userId = this.readString(data, 'userId') ?? 'N/A';
-      return `Fin affectation: utilisateur ${userId}`;
+      const employeeId =
+        this.readString(data, 'employeeId') ?? this.readString(data, 'userId') ?? 'N/A';
+      return `Fin affectation: employé ${employeeId}`;
     }
 
     if (type === 'INCIDENT_REPORTED') {

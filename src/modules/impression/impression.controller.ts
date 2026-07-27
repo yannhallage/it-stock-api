@@ -251,8 +251,15 @@ export class ImpressionController {
    * @swagger
    * /api/impression/printAssigment:
    *   get:
-   *     summary: Génère le rapport PDF des assignations
+   *     summary: Génère la liste PDF de toutes les affectations, ou une fiche si assignmentId est fourni
    *     tags: [Impression]
+   *     parameters:
+   *       - in: query
+   *         name: assignmentId
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Si fourni, imprime la fiche d'une affectation. Sinon, imprime la liste de toutes.
    *     responses:
    *       200:
    *         description: PDF généré avec succès
@@ -261,18 +268,27 @@ export class ImpressionController {
    *             schema:
    *               type: string
    *               format: binary
+   *       400:
+   *         description: assignmentId invalide
+   *       404:
+   *         description: Affectation non trouvée
    *       500:
    *         description: Erreur serveur
    */
   printAssigment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const assignmentId = Number.parseInt(String(req.query.assignmentId ?? ''), 10);
       const authReq = req as AuthRequest;
+      const rawAssignmentId = this.readFirstText(req.query.assignmentId);
 
-      if (Number.isNaN(assignmentId) || assignmentId <= 0) {
-        return res.status(400).json({
-          message: "Le parametre 'assignmentId' doit etre un entier positif.",
-        });
+      let assignmentId: number | undefined;
+      if (rawAssignmentId) {
+        const parsed = Number.parseInt(rawAssignmentId, 10);
+        if (Number.isNaN(parsed) || parsed <= 0) {
+          return res.status(400).json({
+            message: "Le parametre 'assignmentId' doit etre un entier positif.",
+          });
+        }
+        assignmentId = parsed;
       }
 
       const pdfBuffer = await impressionService.printAssigment(assignmentId, authReq.user);

@@ -65,7 +65,7 @@ enum HistoryEventType {
 }
 
 /////////////////////////////////////////////////////
-// USERS
+// USERS (auth only)
 /////////////////////////////////////////////////////
 
 model User {
@@ -75,10 +75,25 @@ model User {
   firstName String
   lastName  String
 
-  assignments Assignment[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/////////////////////////////////////////////////////
+// EMPLOYEES (assignment beneficiaries)
+/////////////////////////////////////////////////////
+
+model Employee {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String? @unique
+
+  assignments Assignment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
 /////////////////////////////////////////////////////
@@ -251,8 +266,8 @@ model Assignment {
   assetId Int
   asset   Asset @relation(fields: [assetId], references: [id])
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
 
   departmentId Int
   department   Department @relation(fields: [departmentId], references: [id])
@@ -264,7 +279,7 @@ model Assignment {
   createdAt DateTime @default(now())
 
   @@index([assetId])
-  @@index([userId])
+  @@index([employeeId])
   @@index([departmentId])
 }
 
