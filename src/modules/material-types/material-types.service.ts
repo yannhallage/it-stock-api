@@ -1,13 +1,10 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { CreateMaterialTypeDto } from './dto/create-material-type.dto';
 import { UpdateMaterialTypeDto } from './dto/update-material-type.dto';
 import { MaterialTypeFilterDto } from './dto/filter-material-types.dto';
 
 export class MaterialTypesService {
   async createMaterialType(data: CreateMaterialTypeDto) {
-    logger.info({ name: data.name }, '[MaterialTypesService] Création de type de matériel demandée');
-
     const materialType = await prisma.materialType.create({
       data: {
         name: data.name,
@@ -15,17 +12,10 @@ export class MaterialTypesService {
       },
     });
 
-    logger.info(
-      { id: materialType.id, name: materialType.name },
-      '[MaterialTypesService] Type de matériel créé avec succès',
-    );
-
     return materialType;
   }
 
   async listMaterialTypes(filters: MaterialTypeFilterDto) {
-    logger.debug({ filters }, '[MaterialTypesService] Listing des types de matériel');
-
     const where: any = { deletedAt: null };
 
     if (filters.search) {
@@ -43,37 +33,23 @@ export class MaterialTypesService {
       },
     });
 
-    logger.debug(
-      { count: materialTypes.length },
-      '[MaterialTypesService] Listing des types de matériel terminé',
-    );
-
     return materialTypes;
   }
 
   async getMaterialTypeById(id: number) {
-    logger.debug({ id }, '[MaterialTypesService] Récupération du type de matériel');
-
     const materialType = await prisma.materialType.findFirst({
       where: { id, deletedAt: null },
     });
-
-    if (!materialType) {
-      logger.warn({ id }, '[MaterialTypesService] Type de matériel non trouvé');
-    }
 
     return materialType;
   }
 
   async updateMaterialType(id: number, data: UpdateMaterialTypeDto) {
-    logger.info({ id }, '[MaterialTypesService] Mise à jour de type de matériel demandée');
-
     const existing = await prisma.materialType.findFirst({
       where: { id, deletedAt: null },
     });
 
     if (!existing) {
-      logger.warn({ id }, "[MaterialTypesService] Mise à jour impossible: type de matériel non trouvé");
       return null;
     }
 
@@ -85,23 +61,15 @@ export class MaterialTypesService {
       },
     });
 
-    logger.info(
-      { id: materialType.id },
-      '[MaterialTypesService] Type de matériel mis à jour avec succès',
-    );
-
     return materialType;
   }
 
   async deleteMaterialType(id: number) {
-    logger.info({ id }, '[MaterialTypesService] Suppression de type de matériel demandée');
-
     const existing = await prisma.materialType.findFirst({
       where: { id, deletedAt: null },
     });
 
     if (!existing) {
-      logger.warn({ id }, '[MaterialTypesService] Suppression impossible: type de matériel non trouvé');
       return false;
     }
 
@@ -109,8 +77,6 @@ export class MaterialTypesService {
       where: { id },
       data: { deletedAt: new Date() },
     });
-
-    logger.info({ id }, '[MaterialTypesService] Type de matériel supprimé avec succès');
 
     return true;
   }

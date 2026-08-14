@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { HistoryEventType, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateMovementDto } from './dto/create-movement.dto';
@@ -22,16 +21,6 @@ const movementInclude = {
 
 export class MovementsService {
   async createMovement(data: CreateMovementDto) {
-    logger.info(
-      {
-        assetId: data.assetId,
-        movementType: data.movementType,
-        fromLocationId: data.fromLocationId,
-        toLocationId: data.toLocationId,
-      },
-      '[MovementsService] Création de mouvement demandée',
-    );
-
     const asset = await prisma.asset.findUnique({ where: { id: data.assetId } });
     if (!asset) {
       return null;
@@ -76,11 +65,6 @@ export class MovementsService {
         });
       });
 
-      logger.info(
-        { id: movement!.id, assetId: data.assetId },
-        '[MovementsService] Mouvement créé avec succès',
-      );
-
       return movement;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientValidationError) {
@@ -102,8 +86,6 @@ export class MovementsService {
   }
 
   async listMovements(filters: MovementFilterDto) {
-    logger.debug({ filters }, '[MovementsService] Listing des mouvements');
-
     const where: Prisma.AssetMovementWhereInput = {};
 
     if (typeof filters.assetId === 'number') {
@@ -116,25 +98,14 @@ export class MovementsService {
       include: movementInclude,
     });
 
-    logger.debug(
-      { count: movements.length },
-      '[MovementsService] Listing des mouvements terminé',
-    );
-
     return movements;
   }
 
   async getMovementById(id: number) {
-    logger.debug({ id }, '[MovementsService] Récupération du mouvement');
-
     const movement = await prisma.assetMovement.findUnique({
       where: { id },
       include: movementInclude,
     });
-
-    if (!movement) {
-      logger.warn({ id }, '[MovementsService] Mouvement non trouvé');
-    }
 
     return movement;
   }

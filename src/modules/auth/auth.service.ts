@@ -5,7 +5,6 @@ import { prisma } from '../../prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { env } from '../../config/env';
-import { logger } from '../../logger';
 import { HttpError } from '../../errors/http-error';
 
 const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 3600;
@@ -50,13 +49,11 @@ export class AuthService {
   }
 
   async register(data: RegisterDto) {
-    logger.info({ email: data.email }, '[AuthService] Tentative inscription utilisateur');
     const existing = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (existing) {
-      logger.warn({ email: data.email }, '[AuthService] Inscription échouée: utilisateur déjà existant');
       throw new HttpError(
         409,
         'Un utilisateur avec cet email existe déjà.',
@@ -64,7 +61,6 @@ export class AuthService {
       );
     }
 
-    logger.debug({ email: data.email }, '[AuthService] Hachage du mot de passe');
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     try {
@@ -78,15 +74,9 @@ export class AuthService {
         select: publicUserSelect,
       });
 
-      logger.info({ id: user.id, email: user.email }, '[AuthService] Utilisateur créé avec succès');
-
       return this.buildSession(user);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        logger.warn(
-          { email: data.email, err: error },
-          '[AuthService] Inscription échouée: email déjà utilisé',
-        );
         throw new HttpError(
           409,
           'Un utilisateur avec cet email existe déjà.',
@@ -99,7 +89,6 @@ export class AuthService {
   }
 
   async login(data: LoginDto) {
-    logger.info({ email: data.email }, '[AuthService] Tentative connexion utilisateur');
     const user = await prisma.user.findUnique({
       where: { email: data.email },
       select: {
@@ -109,36 +98,30 @@ export class AuthService {
     });
 
     if (!user) {
-      logger.warn({ email: data.email }, '[AuthService] Connexion échouée: utilisateur non trouvé');
       throw new HttpError(401, 'Identifiants invalides.', 'AUTH_INVALID_CREDENTIALS');
     }
 
     const isValid = await bcrypt.compare(data.password, user.password);
 
     if (!isValid) {
-      logger.warn({ email: data.email }, '[AuthService] Connexion échouée: mot de passe incorrect');
       throw new HttpError(401, 'Identifiants invalides.', 'AUTH_INVALID_CREDENTIALS');
     }
 
-    logger.info({ id: user.id, email: user.email }, '[AuthService] Connexion réussie');
     const { password: _password, ...publicUser } = user;
 
     return this.buildSession(publicUser);
   }
 
   async getProfile(userId: string) {
-    logger.debug('[AuthService] Récupération profil utilisateur');
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: publicUserSelect,
     });
 
     if (!user) {
-      logger.warn({ userId }, '[AuthService] Utilisateur non trouvé');
       throw new HttpError(404, "L'utilisateur n'existe pas.", 'AUTH_USER_NOT_FOUND');
     }
 
-    logger.info({ userId: user.id, email: user.email }, '[AuthService] Profil utilisateur récupéré');
     return user;
   }
 }

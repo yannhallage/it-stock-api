@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
 import { ImpressionService } from './impression.service';
-import { logger } from '../../logger';
 import { AuthRequest } from '../auth/auth.middleware';
 import { validateAssetFilterDto } from '../stocks/dto/filter-assets.dto';
 
@@ -44,7 +43,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="assets-report.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression assets');
       return next(error);
     }
   };
@@ -77,7 +75,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="inventaire-parc.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression inventaire');
       return next(error);
     }
   };
@@ -105,7 +102,6 @@ export class ImpressionController {
       );
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur fiches signaletiques');
       return next(error);
     }
   };
@@ -159,7 +155,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression materiel');
       return next(error);
     }
   };
@@ -188,7 +183,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="screen-loans-report.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression emprunts');
       return next(error);
     }
   };
@@ -242,7 +236,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression emprunt');
       return next(error);
     }
   };
@@ -296,7 +289,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="assignments-report.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression assignments');
       return next(error);
     }
   };
@@ -325,7 +317,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="suppliers-report.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression suppliers');
       return next(error);
     }
   };
@@ -354,7 +345,6 @@ export class ImpressionController {
       res.setHeader('Content-Disposition', 'attachment; filename="incidents-report.pdf"');
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error }, '[ImpressionController] Erreur impression incidents');
       return next(error);
     }
   };

@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { WorkshopService } from './workshop.service';
-import { logger } from '../../logger';
 import { validateStartRepairDto } from './dto/start-repair.dto';
 import { validateCloseRepairDto } from './dto/close-repair.dto';
 import { validateRepairFilterDto } from './dto/filter-repairs.dto';
@@ -39,12 +38,10 @@ export class WorkshopController {
    *         description: Filtres invalides
    */
   listRepairs = async (req: Request, res: Response, next: NextFunction) => {
-    logger.debug('[WorkshopController] GET /atelier/repairs - liste des réparations');
     try {
       const { value, errors } = validateRepairFilterDto(req.query);
 
       if (errors) {
-        logger.warn({ errors }, '[WorkshopController] Filtres réparations invalides');
         return res.status(400).json({
           message: 'Les filtres fournis pour lister les réparations sont invalides.',
           errors,
@@ -52,10 +49,8 @@ export class WorkshopController {
       }
 
       const repairs = await workshopService.listRepairs(value);
-      logger.debug({ count: repairs.length }, '[WorkshopController] Liste réparations renvoyée');
       return res.status(200).json(repairs);
     } catch (error) {
-      logger.error({ err: error }, '[WorkshopController] Erreur liste réparations');
       return next(error);
     }
   };
@@ -82,7 +77,6 @@ export class WorkshopController {
    */
   getRepairById = async (req: Request, res: Response, next: NextFunction) => {
     const id = parseInt(req.params.id, 10);
-    logger.debug({ id }, '[WorkshopController] GET /atelier/repairs/:id');
     try {
       if (Number.isNaN(id)) {
         return res
@@ -93,13 +87,11 @@ export class WorkshopController {
       const repair = await workshopService.getRepairById(id);
 
       if (!repair) {
-        logger.warn({ id }, '[WorkshopController] Réparation non trouvée');
         return res.status(404).json({ message: 'Réparation non trouvée.' });
       }
 
       return res.status(200).json(repair);
     } catch (error) {
-      logger.error({ err: error, id }, '[WorkshopController] Erreur get réparation par id');
       return next(error);
     }
   };
@@ -141,12 +133,10 @@ export class WorkshopController {
    *         description: Incident non trouvé
    */
   startRepair = async (req: Request, res: Response, next: NextFunction) => {
-    logger.debug('[WorkshopController] POST /atelier/repairs/start');
     try {
       const { value, errors } = validateStartRepairDto(req.body);
 
       if (errors) {
-        logger.warn({ errors }, '[WorkshopController] Données start réparation invalides');
         return res.status(400).json({
           message: "Les données fournies pour démarrer la réparation sont invalides.",
           errors,
@@ -159,13 +149,8 @@ export class WorkshopController {
         return res.status(404).json({ message: 'Incident non trouvé.' });
       }
 
-      logger.info(
-        { repairId: result.id },
-        '[WorkshopController] Réparation démarrée, réponse 201',
-      );
       return res.status(201).json(result);
     } catch (error) {
-      logger.error({ err: error }, '[WorkshopController] Erreur démarrage réparation');
       return next(error);
     }
   };
@@ -204,7 +189,6 @@ export class WorkshopController {
    */
   closeRepair = async (req: Request, res: Response, next: NextFunction) => {
     const id = parseInt(req.params.id, 10);
-    logger.debug({ id }, '[WorkshopController] PATCH /atelier/repairs/:id/close');
     try {
       if (Number.isNaN(id)) {
         return res
@@ -215,7 +199,6 @@ export class WorkshopController {
       const { value, errors } = validateCloseRepairDto(req.body);
 
       if (errors) {
-        logger.warn({ errors }, '[WorkshopController] Données close réparation invalides');
         return res.status(400).json({
           message: "Les données fournies pour clôturer la réparation sont invalides.",
           errors,
@@ -225,14 +208,11 @@ export class WorkshopController {
       const updated = await workshopService.closeRepair(id, value!);
 
       if (!updated) {
-        logger.warn({ id }, '[WorkshopController] Réparation non trouvée pour clôture');
         return res.status(404).json({ message: 'Réparation non trouvée.' });
       }
 
-      logger.info({ repairId: id }, '[WorkshopController] Réparation clôturée, réponse 200');
       return res.status(200).json(updated);
     } catch (error) {
-      logger.error({ err: error, id }, '[WorkshopController] Erreur clôture réparation');
       return next(error);
     }
   };
@@ -264,7 +244,6 @@ export class WorkshopController {
    */
   printRepairSheet = async (req: Request, res: Response, next: NextFunction) => {
     const id = parseInt(req.params.id, 10);
-    logger.debug({ id }, '[WorkshopController] GET /atelier/repairs/:id/print');
     try {
       if (Number.isNaN(id)) {
         return res
@@ -275,7 +254,6 @@ export class WorkshopController {
       const payload = await workshopService.getRepairPrintPayload(id);
 
       if (!payload) {
-        logger.warn({ id }, '[WorkshopController] Réparation non trouvée pour impression');
         return res.status(404).json({ message: 'Réparation non trouvée.' });
       }
 
@@ -290,7 +268,6 @@ export class WorkshopController {
 
       return res.status(200).send(pdfBuffer);
     } catch (error) {
-      logger.error({ err: error, id }, '[WorkshopController] Erreur génération PDF réparation');
       return next(error);
     }
   };

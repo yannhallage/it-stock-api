@@ -1,54 +1,49 @@
-import { env } from './config/env';
+const reset = '\x1b[0m';
+const dim = '\x1b[2m';
+const bold = '\x1b[1m';
+const cyan = '\x1b[36m';
+const green = '\x1b[32m';
+const yellow = '\x1b[33m';
+const red = '\x1b[31m';
+const magenta = '\x1b[35m';
+const gray = '\x1b[90m';
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-type LogMethod = (messageOrContext: unknown, message?: string, ...details: unknown[]) => void;
-
-const shouldLog = (level: LogLevel): boolean => env.nodeEnv === 'development' || level !== 'debug';
-
-const normalizeError = (error: Error) => ({
-  name: error.name,
-  message: error.message,
-  stack: error.stack,
-});
-
-const normalizeContext = (context: unknown): unknown => {
-  if (context instanceof Error) {
-    return normalizeError(context);
+const methodColor = (method: string): string => {
+  switch (method) {
+    case 'GET':
+      return cyan;
+    case 'POST':
+      return green;
+    case 'PUT':
+    case 'PATCH':
+      return yellow;
+    case 'DELETE':
+      return red;
+    default:
+      return magenta;
   }
-
-  if (!context || typeof context !== 'object') {
-    return context;
-  }
-
-  return Object.fromEntries(
-    Object.entries(context as Record<string, unknown>).map(([key, value]) => [
-      key,
-      value instanceof Error ? normalizeError(value) : value,
-    ])
-  );
 };
 
-const writeLog = (level: LogLevel, messageOrContext: unknown, message?: string, ...details: unknown[]) => {
-  if (!shouldLog(level)) {
-    return;
-  }
-
-  const timestamp = new Date().toISOString();
-  const prefix = `[${timestamp}] ${level.toUpperCase()}`;
-  const consoleMethod = level === 'debug' ? console.debug : level === 'info' ? console.info : console[level];
-
-  if (typeof messageOrContext === 'string') {
-    consoleMethod(prefix, messageOrContext, ...details);
-    return;
-  }
-
-  consoleMethod(prefix, message ?? '', normalizeContext(messageOrContext), ...details);
+const statusColor = (status: number): string => {
+  if (status >= 500) return red;
+  if (status >= 400) return yellow;
+  if (status >= 300) return cyan;
+  return green;
 };
 
-export const logger: Record<LogLevel, LogMethod> = {
-  debug: (...args) => writeLog('debug', ...args),
-  info: (...args) => writeLog('info', ...args),
-  warn: (...args) => writeLog('warn', ...args),
-  error: (...args) => writeLog('error', ...args),
-};
+export const logger = {
+  info: (message: string) => {
+    console.log(`${gray}[${new Date().toISOString()}]${reset} ${message}`);
+  },
+  error: (message: string) => {
+    console.error(`${gray}[${new Date().toISOString()}]${reset} ${red}${message}${reset}`);
+  },
+  http: (method: string, url: string, status: number, durationMs: number) => {
+    const timestamp = `${gray}[${new Date().toISOString()}]${reset}`;
+    const methodPart = `${methodColor(method)}${bold}${method}${reset}`;
+    const statusPart = `${statusColor(status)}${bold}${status}${reset}`;
+    const durationPart = `${dim}${durationMs}ms${reset}`;
 
+    console.log(`${timestamp} ${methodPart} ${url} ${statusPart} ${durationPart}`);
+  },
+};

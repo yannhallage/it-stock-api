@@ -8,16 +8,13 @@ const server = http.createServer(app);
 const start = async () => {
   try {
     server.listen(env.port, () => {
-      logger.info(
-        `[IT-STOCK-API] Serveur lancé sur le port ${env.port} en mode ${env.nodeEnv}`,
-      );
-      logger.info('[IT-STOCK-API] Swagger disponible sur /docs');
+      logger.info(`Serveur lancé sur le port ${env.port} en mode ${env.nodeEnv}`);
     });
   } catch (error) {
-    logger.error({ err: error }, '[IT-STOCK-API] Erreur au démarrage du serveur');
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Erreur au démarrage du serveur: ${message}`);
     process.exit(1);
   }
 };
 
 start();
-

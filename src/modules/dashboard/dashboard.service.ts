@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { AssetStatus, Prisma } from '@prisma/client';
 
 const STATUT_LIBELLES: Record<AssetStatus, string> = {
@@ -67,8 +66,6 @@ export interface MachinesStatsPoint {
 
 export class DashboardService {
   async getDashboard(): Promise<DashboardData> {
-    logger.debug('[DashboardService] Calcul des indicateurs du tableau de bord');
-
     const renewThreshold = new Date();
     renewThreshold.setFullYear(renewThreshold.getFullYear() - 4);
     const now = new Date();
@@ -191,22 +188,10 @@ export class DashboardService {
       materiels_par_type,
     };
 
-    logger.debug(
-      {
-        totalMateriels,
-        enStock,
-        affectes,
-        reparationsEnCours,
-      },
-      '[DashboardService] Tableau de bord calculé',
-    );
-
     return data;
   }
 
   async getMachinesStats(granularity: StatsGranularity): Promise<MachinesStatsPoint[]> {
-    logger.debug({ granularity }, '[DashboardService] Calcul des statistiques machines');
-
     type CountRow = { period_start: Date; count: bigint };
 
     const [
@@ -318,7 +303,6 @@ export class DashboardService {
       (a, b) => a.periodStart.getTime() - b.periodStart.getTime(),
     );
 
-    logger.debug({ points: data.length }, '[DashboardService] Statistiques machines calculées');
     return data;
   }
 }
