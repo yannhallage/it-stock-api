@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { AssetStatus, HistoryEventType, IncidentStatus, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateIncidentDto } from './dto/create-incident.dto';
@@ -35,21 +34,11 @@ export class IncidentsService {
   async listIncidents(params: IncidentFilterDto) {
     const where = this.buildIncidentWhere(params);
 
-    logger.debug(
-      { assetId: params.assetId, status: params.status, departmentId: params.departmentId },
-      '[IncidentsService] Listing des incidents',
-    );
-
     const incidents = await prisma.incident.findMany({
       where,
       orderBy: { reportedAt: 'desc' },
       include: incidentInclude,
     });
-
-    logger.debug(
-      { count: incidents.length },
-      '[IncidentsService] Listing des incidents terminé',
-    );
 
     return incidents;
   }
@@ -57,11 +46,6 @@ export class IncidentsService {
   /** Données enrichies pour le PDF liste des pannes (bénéficiaire = affectation active du matériel). */
   async listIncidentsForPdf(params: IncidentFilterDto) {
     const where = this.buildIncidentWhere(params);
-
-    logger.debug(
-      { assetId: params.assetId, status: params.status, departmentId: params.departmentId },
-      '[IncidentsService] Listing des incidents pour impression PDF',
-    );
 
     const incidents = await prisma.incident.findMany({
       where,
@@ -84,11 +68,6 @@ export class IncidentsService {
       },
     });
 
-    logger.debug(
-      { count: incidents.length },
-      '[IncidentsService] Listing des incidents pour PDF terminé',
-    );
-
     return incidents;
   }
 
@@ -107,7 +86,6 @@ export class IncidentsService {
     });
 
     if (!incident) {
-      logger.warn({ id }, '[IncidentsService] Incident non trouvé');
       return null;
     }
 
@@ -115,11 +93,6 @@ export class IncidentsService {
   }
 
   async createForAsset(assetId: number, data: CreateIncidentDto) {
-    logger.info(
-      { assetId, departmentId: data.departmentId },
-      '[IncidentsService] Création d’un incident demandée',
-    );
-
     if (!Number.isInteger(assetId) || assetId < 1) {
       throw new HttpError(
         400,
@@ -135,7 +108,6 @@ export class IncidentsService {
         });
 
         if (!asset) {
-          logger.warn({ assetId }, '[IncidentsService] Matériel non trouvé pour incident');
           return null;
         }
 
@@ -203,18 +175,9 @@ export class IncidentsService {
 
       const { incident, historyEvents } = result;
 
-      logger.info(
-        { incidentId: incident.id, assetId },
-        '[IncidentsService] Incident créé avec succès',
-      );
-
       return { incident, historyEvents };
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { assetId, error },
-          '[IncidentsService] Données invalides lors de la création de l’incident',
-        );
         throw new HttpError(
           400,
           "Les données fournies pour créer l'incident sont invalides.",
@@ -224,14 +187,12 @@ export class IncidentsService {
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
-          logger.warn({ assetId, error }, '[IncidentsService] Matériel ou département inexistant (FK)');
           throw new HttpError(
             404,
             'Matériel ou département non trouvé.',
             'ASSET_OR_DEPARTMENT_NOT_FOUND',
           );
         }
-        logger.warn({ assetId, code: error.code, error }, '[IncidentsService] Erreur Prisma connue');
         throw new HttpError(
           400,
           "Erreur lors de la création de l'incident.",
@@ -243,20 +204,11 @@ export class IncidentsService {
         throw error;
       }
 
-      logger.error(
-        { error, assetId },
-        '[IncidentsService] Erreur inattendue lors de la création de l’incident',
-      );
       throw error;
     }
   }
 
   async updateStatus(id: number, data: UpdateIncidentDto) {
-    logger.info(
-      { id, status: data.status },
-      '[IncidentsService] Mise à jour du statut d’un incident demandée',
-    );
-
     if (!Number.isInteger(id) || id < 1) {
       throw new HttpError(
         400,
@@ -272,7 +224,6 @@ export class IncidentsService {
       });
 
       if (!incident) {
-        logger.warn({ id }, '[IncidentsService] Incident non trouvé pour mise à jour');
         return null;
       }
 
@@ -290,18 +241,9 @@ export class IncidentsService {
         include: incidentInclude,
       });
 
-      logger.info(
-        { incidentId: id, newStatus: data.status },
-        '[IncidentsService] Statut de l’incident mis à jour avec succès',
-      );
-
       return updated;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { id, error },
-          '[IncidentsService] Données invalides pour la mise à jour du statut',
-        );
         throw new HttpError(
           400,
           "Les données fournies pour mettre à jour l'incident sont invalides.",
@@ -313,10 +255,6 @@ export class IncidentsService {
         throw error;
       }
 
-      logger.error(
-        { error, id },
-        '[IncidentsService] Erreur inattendue lors de la mise à jour du statut',
-      );
       throw error;
     }
   }

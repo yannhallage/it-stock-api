@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import {
   AssetStatus,
   HistoryEventType,
@@ -27,17 +26,10 @@ export class WorkshopService {
    * Liste toutes les réparations (avec incident + matériel), y compris TERMINE.
    */
   async listRepairs(_params: RepairFilterDto) {
-    logger.debug('[WorkshopService] Listing complet des réparations');
-
     const repairs = await prisma.repair.findMany({
       orderBy: { workshopEntryDate: 'desc' },
       include: repairInclude,
     });
-
-    logger.debug(
-      { count: repairs.length },
-      '[WorkshopService] Listing des réparations terminé',
-    );
 
     return repairs;
   }
@@ -54,15 +46,12 @@ export class WorkshopService {
       );
     }
 
-    logger.debug({ id }, '[WorkshopService] Récupération réparation par id');
-
     const repair = await prisma.repair.findUnique({
       where: { id },
       include: repairInclude,
     });
 
     if (!repair) {
-      logger.warn({ id }, '[WorkshopService] Réparation non trouvée');
       return null;
     }
 
@@ -81,15 +70,12 @@ export class WorkshopService {
       );
     }
 
-    logger.debug({ id }, '[WorkshopService] Récupération des données de fiche PDF');
-
     const repair = await prisma.repair.findUnique({
       where: { id },
       include: repairInclude,
     });
 
     if (!repair) {
-      logger.warn({ id }, '[WorkshopService] Réparation introuvable pour impression');
       return null;
     }
 
@@ -113,15 +99,6 @@ export class WorkshopService {
    * Démarrer une réparation : incident ouvert → réparation EN_COURS, matériel EN_REPARATION.
    */
   async startRepair(data: StartRepairDto) {
-    logger.info(
-      {
-        incidentId: data.incidentId,
-        workshopEntryDate: data.workshopEntryDate,
-        technicianName: data.technicianName,
-      },
-      '[WorkshopService] Démarrage d\'une réparation demandé',
-    );
-
     try {
       const result = await prisma.$transaction(async (tx) => {
         const incident = await tx.incident.findUnique({
@@ -130,18 +107,10 @@ export class WorkshopService {
         });
 
         if (!incident) {
-          logger.warn(
-            { incidentId: data.incidentId },
-            '[WorkshopService] Incident non trouvé pour démarrage réparation',
-          );
           return null;
         }
 
         if (incident.status !== IncidentStatus.OUVERT) {
-          logger.warn(
-            { incidentId: data.incidentId, status: incident.status },
-            '[WorkshopService] L\'incident n\'est pas ouvert',
-          );
           throw new HttpError(
             400,
             "Seul un incident ouvert peut être envoyé en réparation.",
@@ -157,10 +126,6 @@ export class WorkshopService {
         });
 
         if (existingEnCours) {
-          logger.warn(
-            { incidentId: data.incidentId, repairId: existingEnCours.id },
-            '[WorkshopService] Une réparation est déjà en cours pour cet incident',
-          );
           throw new HttpError(
             400,
             'Une réparation est déjà en cours pour cet incident.',
@@ -210,11 +175,6 @@ export class WorkshopService {
         return null;
       }
 
-      logger.info(
-        { repairId: result.repair.id, incidentId: data.incidentId, assetId: result.assetId },
-        '[WorkshopService] Réparation démarrée avec succès',
-      );
-
       const repairWithRelations = await prisma.repair.findUnique({
         where: { id: result.repair.id },
         include: repairInclude,
@@ -226,10 +186,6 @@ export class WorkshopService {
         throw error;
       }
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { incidentId: data.incidentId, error },
-          '[WorkshopService] Données invalides lors du démarrage de la réparation',
-        );
         throw new HttpError(
           400,
           "Les données fournies pour démarrer la réparation sont invalides.",
@@ -238,26 +194,14 @@ export class WorkshopService {
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
-          logger.warn(
-            { incidentId: data.incidentId, error },
-            '[WorkshopService] Incident inexistant (FK)',
-          );
           throw new HttpError(404, 'Incident non trouvé.', 'INCIDENT_NOT_FOUND');
         }
-        logger.warn(
-          { incidentId: data.incidentId, code: error.code, error },
-          '[WorkshopService] Erreur Prisma connue',
-        );
         throw new HttpError(
           400,
           "Erreur lors du démarrage de la réparation.",
           'REPAIR_START_ERROR',
         );
       }
-      logger.error(
-        { error, incidentId: data.incidentId },
-        '[WorkshopService] Erreur inattendue lors du démarrage de la réparation',
-      );
       throw error;
     }
   }
@@ -267,11 +211,6 @@ export class WorkshopService {
    * incident → CLOS, réparation → TERMINE.
    */
   async closeRepair(repairId: number, data: CloseRepairDto) {
-    logger.info(
-      { repairId, outcome: data.outcome },
-      '[WorkshopService] Clôture d\'une réparation demandée',
-    );
-
     if (!Number.isInteger(repairId) || repairId < 1) {
       throw new HttpError(
         400,
@@ -288,15 +227,10 @@ export class WorkshopService {
         });
 
         if (!repair) {
-          logger.warn({ repairId }, '[WorkshopService] Réparation non trouvée pour clôture');
           return null;
         }
 
         if (repair.status === RepairStatus.TERMINE) {
-          logger.warn(
-            { repairId },
-            '[WorkshopService] Réparation déjà clôturée',
-          );
           throw new HttpError(
             400,
             'Cette réparation est déjà clôturée.',
@@ -352,16 +286,6 @@ export class WorkshopService {
         return null;
       }
 
-      logger.info(
-        {
-          repairId: result.repairId,
-          incidentId: result.incidentId,
-          assetId: result.assetId,
-          outcome: result.outcome,
-        },
-        '[WorkshopService] Réparation clôturée avec succès',
-      );
-
       const updated = await prisma.repair.findUnique({
         where: { id: repairId },
         include: repairInclude,
@@ -373,20 +297,12 @@ export class WorkshopService {
         throw error;
       }
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { repairId, error },
-          '[WorkshopService] Données invalides lors de la clôture de la réparation',
-        );
         throw new HttpError(
           400,
           "Les données fournies pour clôturer la réparation sont invalides.",
           'REPAIR_CLOSE_VALIDATION_ERROR',
         );
       }
-      logger.error(
-        { error, repairId },
-        '[WorkshopService] Erreur inattendue lors de la clôture de la réparation',
-      );
       throw error;
     }
   }

@@ -69,7 +69,6 @@ app.use(
         'http://81.0.220.161:8080',
         'http://localhost:8080'
       ];
-      console.log(`[CORS] Vérification de l'origine: ${origin}`);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
@@ -83,6 +82,21 @@ app.options('*', cors());
 app.options('*', cors());
 // Middleware pour parser le JSON
 app.use(express.json());
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const url = req.originalUrl;
+    if (url === '/health' || url.startsWith('/docs')) {
+      return;
+    }
+
+    logger.http(req.method, url, res.statusCode, Date.now() - start);
+  });
+
+  next();
+});
 
 // Documentation Swagger disponible à /docs (token stocké après Authorize)
 app.use(
@@ -127,12 +141,6 @@ app.use('/api/movements', authenticate, movementsModule.router);
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const isHttpError = err instanceof HttpError || (typeof err.status === 'number' && err.status >= 400 && err.status < 600);
   const status: number = isHttpError ? err.status ?? 400 : 500;
-
-  if (status >= 500) {
-    logger.error({ err }, '[IT-STOCK-API] Erreur non gérée');
-  } else {
-    logger.warn({ err }, '[IT-STOCK-API] Erreur applicative');
-  }
 
   res.status(status).json({
     message: err.message || 'Erreur interne du serveur',

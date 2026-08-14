@@ -284,8 +284,6 @@ export class StocksController {
    *         description: Numéro d'inventaire déjà utilisé
    */
   update = async (req: Request, res: Response, next: NextFunction) => {
-
-    console.log(req.body);
     try {
       const id = parseInt(req.params.id, 10);
 
@@ -294,13 +292,11 @@ export class StocksController {
       }
 
       const { value, errors } = validateUpdateAssetDto(req.body);
-      console.log('valider par zod')
       if (errors) {
         return res.status(400).json({ errors });
       }
 
       const asset = await stocksService.updateAsset(id, value!);
-      console.log('asset', asset);
       if (!asset) {
         return res.status(404).json({ message: 'Matériel non trouvé.' });
       }

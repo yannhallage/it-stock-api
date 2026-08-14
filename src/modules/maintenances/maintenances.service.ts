@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { HistoryEventType, MaintenanceStatus, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
@@ -29,11 +28,6 @@ export class MaintenancesService {
   }
 
   async createMaintenance(data: CreateMaintenanceDto) {
-    logger.info(
-      { assetId: data.assetId, title: data.title },
-      '[MaintenancesService] Création de maintenance demandée',
-    );
-
     const asset = await prisma.asset.findUnique({ where: { id: data.assetId } });
     if (!asset) {
       return null;
@@ -72,11 +66,6 @@ export class MaintenancesService {
         });
       });
 
-      logger.info(
-        { id: maintenance!.id, assetId: data.assetId },
-        '[MaintenancesService] Maintenance créée avec succès',
-      );
-
       return maintenance;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientValidationError) {
@@ -91,44 +80,28 @@ export class MaintenancesService {
   }
 
   async listMaintenances(filters: MaintenanceFilterDto) {
-    logger.debug({ filters }, '[MaintenancesService] Listing des maintenances');
-
     const maintenances = await prisma.maintenance.findMany({
       where: this.buildWhere(filters),
       orderBy: { scheduledDate: 'desc' },
       include: { asset: { select: assetSelect } },
     });
 
-    logger.debug(
-      { count: maintenances.length },
-      '[MaintenancesService] Listing des maintenances terminé',
-    );
-
     return maintenances;
   }
 
   async getMaintenanceById(id: number) {
-    logger.debug({ id }, '[MaintenancesService] Récupération de la maintenance');
-
     const maintenance = await prisma.maintenance.findUnique({
       where: { id },
       include: { asset: { select: assetSelect } },
     });
 
-    if (!maintenance) {
-      logger.warn({ id }, '[MaintenancesService] Maintenance non trouvée');
-    }
-
     return maintenance;
   }
 
   async updateMaintenance(id: number, data: UpdateMaintenanceDto) {
-    logger.info({ id }, '[MaintenancesService] Mise à jour de maintenance demandée');
-
     const existing = await prisma.maintenance.findUnique({ where: { id } });
 
     if (!existing) {
-      logger.warn({ id }, '[MaintenancesService] Mise à jour impossible: maintenance non trouvée');
       return null;
     }
 
@@ -145,21 +118,13 @@ export class MaintenancesService {
       include: { asset: { select: assetSelect } },
     });
 
-    logger.info({ id }, '[MaintenancesService] Maintenance mise à jour avec succès');
-
     return maintenance;
   }
 
   async updateMaintenanceStatus(id: number, data: UpdateMaintenanceStatusDto) {
-    logger.info(
-      { id, status: data.status },
-      '[MaintenancesService] Mise à jour du statut de maintenance demandée',
-    );
-
     const existing = await prisma.maintenance.findUnique({ where: { id } });
 
     if (!existing) {
-      logger.warn({ id }, '[MaintenancesService] Maintenance non trouvée pour mise à jour du statut');
       return null;
     }
 
@@ -177,27 +142,17 @@ export class MaintenancesService {
       include: { asset: { select: assetSelect } },
     });
 
-    logger.info(
-      { id, status: data.status },
-      '[MaintenancesService] Statut de maintenance mis à jour avec succès',
-    );
-
     return maintenance;
   }
 
   async deleteMaintenance(id: number) {
-    logger.info({ id }, '[MaintenancesService] Suppression de maintenance demandée');
-
     const existing = await prisma.maintenance.findUnique({ where: { id } });
 
     if (!existing) {
-      logger.warn({ id }, '[MaintenancesService] Suppression impossible: maintenance non trouvée');
       return false;
     }
 
     await prisma.maintenance.delete({ where: { id } });
-
-    logger.info({ id }, '[MaintenancesService] Maintenance supprimée avec succès');
 
     return true;
   }

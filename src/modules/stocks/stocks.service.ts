@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { AssetFilterDto } from './dto/filter-assets.dto';
@@ -37,17 +36,6 @@ export class StocksService {
         ? data.inventoryNumber.trim()
         : `INV-${Date.now()}`;
 
-    logger.info(
-      {
-        inventoryNumber,
-        categoryId: data.categoryId,
-        materialTypeId: data.materialTypeId,
-        brandId: data.brandId,
-        model: data.model,
-      },
-      '[StocksService] Création de matériel demandée',
-    );
-
     try {
       const asset = await prisma.asset.create({
         data: {
@@ -74,11 +62,6 @@ export class StocksService {
         },
       });
 
-      logger.info(
-        { id: asset.id, inventoryNumber: asset.inventoryNumber },
-        '[StocksService] Matériel créé avec succès',
-      );
-
       try {
         await prisma.historyEvent.create({
           data: {
@@ -102,27 +85,14 @@ export class StocksService {
             },
           },
         });
-
-        logger.debug(
-          { assetId: asset.id },
-          '[StocksService] Événement historique de création de matériel enregistré',
-        );
-      } catch (historyError) {
-        logger.error(
-          { historyError, assetId: asset.id },
-          '[StocksService] Erreur lors de la création de lévénement historique de création de matériel',
-        );
+      } catch {
+        // L'historique n'est pas bloquant pour la création du matériel.
       }
 
       return asset;
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          logger.warn(
-            { inventoryNumber, error },
-            "[StocksService] Conflit sur le numéro d'inventaire (doublon)",
-          );
-
           throw new HttpError(
             409,
             "Un matériel avec ce numéro d'inventaire existe déjà.",
@@ -131,11 +101,6 @@ export class StocksService {
         }
 
         if (error.code === 'P2003') {
-          logger.warn(
-            { inventoryNumber, error },
-            '[StocksService] Référence invalide lors de la création du matériel',
-          );
-
           throw new HttpError(
             400,
             'Une référence fournie (catégorie, type, marque, fournisseur ou localisation) est invalide.',
@@ -145,11 +110,6 @@ export class StocksService {
       }
 
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { inventoryNumber, error },
-          '[StocksService] Données invalides lors de la création du matériel',
-        );
-
         throw new HttpError(
           400,
           'Les données fournies pour créer le matériel sont invalides.',
@@ -157,31 +117,16 @@ export class StocksService {
         );
       }
 
-      logger.error(
-        {
-          error,
-          inventoryNumber,
-          categoryId: data.categoryId,
-          materialTypeId: data.materialTypeId,
-          brandId: data.brandId,
-          model: data.model,
-        },
-        '[StocksService] Erreur inattendue lors de la création du matériel',
-      );
-
       throw error;
     }
   }
 
   async updateAsset(id: number, data: UpdateAssetDto) {
-    logger.info({ id }, '[StocksService] Mise à jour de matériel demandée');
-
     const existing = await prisma.asset.findUnique({
       where: { id },
     });
 
     if (!existing) {
-      logger.warn({ id }, '[StocksService] Mise à jour impossible: matériel non trouvé');
       return null;
     }
 
@@ -230,12 +175,9 @@ export class StocksService {
         },
       });
 
-      logger.info({ id }, '[StocksService] Matériel mis à jour avec succès');
-
       return asset;
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        logger.warn({ id, error }, '[StocksService] Référence invalide lors de la mise à jour du matériel');
         throw new HttpError(
           400,
           'Une référence fournie (catégorie, type, marque, fournisseur ou localisation) est invalide.',
@@ -386,8 +328,6 @@ export class StocksService {
   }
 
   async getAssets(filters: AssetFilterDto) {
-    logger.debug({ filters }, '[StocksService] Listing des matériels');
-
     const where = this.buildAssetWhere(filters);
 
     try {
@@ -414,16 +354,9 @@ export class StocksService {
         },
       });
 
-      logger.debug({ count: assets.length }, '[StocksService] Listing des matériels terminé');
-
       return assets.map((asset) => this.mapAssetWithCurrentAssignment(asset));
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { filters, error },
-          '[StocksService] Données de filtre invalides lors du listing des matériels',
-        );
-
         throw new HttpError(
           400,
           'Les filtres fournis pour lister les matériels sont invalides.',
@@ -431,18 +364,11 @@ export class StocksService {
         );
       }
 
-      logger.error(
-        { error, filters },
-        '[StocksService] Erreur inattendue lors du listing des matériels',
-      );
-
       throw error;
     }
   }
 
   async getInventorySummary(filters: AssetFilterDto = {}) {
-    logger.debug({ filters }, '[StocksService] Synthèse inventaire demandée');
-
     const where = this.buildAssetWhere(filters);
 
     const [total, byStatusRows, warrantyExpired, toRenew] = await Promise.all([
@@ -523,8 +449,6 @@ export class StocksService {
   }
 
   async getAssetById(id: number) {
-    logger.debug('[StocksService] Récupération du matériel');
-
     try {
       const asset = await prisma.asset.findUnique({
         where: { id },
@@ -532,7 +456,6 @@ export class StocksService {
       });
 
       if (!asset) {
-        logger.warn('[StocksService] Matériel non trouvé');
         return null;
       }
 
@@ -551,22 +474,12 @@ export class StocksService {
       };
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { id, error },
-          '[StocksService] Identifiant invalide lors de la récupération du matériel',
-        );
-
         throw new HttpError(
           400,
           "L'identifiant fourni pour récupérer le matériel est invalide.",
           'ASSET_ID_VALIDATION_ERROR',
         );
       }
-
-      logger.error(
-        { error, id },
-        '[StocksService] Erreur inattendue lors de la récupération du matériel',
-      );
 
       throw error;
     }
@@ -582,11 +495,6 @@ export class StocksService {
         'ASSET_INVENTORY_NUMBER_REQUIRED',
       );
     }
-
-    logger.debug(
-      { inventoryNumber: normalizedInventoryNumber },
-      '[StocksService] Recuperation du materiel par numero inventaire',
-    );
 
     try {
       const asset = await prisma.asset.findUnique({
@@ -606,10 +514,6 @@ export class StocksService {
       });
 
       if (!asset) {
-        logger.warn(
-          { inventoryNumber: normalizedInventoryNumber },
-          '[StocksService] Materiel non trouve par numero inventaire',
-        );
         return null;
       }
 
@@ -629,11 +533,6 @@ export class StocksService {
       };
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { inventoryNumber: normalizedInventoryNumber, error },
-          '[StocksService] Numero inventaire invalide lors de la recuperation du materiel',
-        );
-
         throw new HttpError(
           400,
           "Le numero d'inventaire fourni pour recuperer le materiel est invalide.",
@@ -641,25 +540,17 @@ export class StocksService {
         );
       }
 
-      logger.error(
-        { error, inventoryNumber: normalizedInventoryNumber },
-        '[StocksService] Erreur inattendue lors de la recuperation du materiel par numero inventaire',
-      );
-
       throw error;
     }
   }
 
   async deleteAsset(id: number) {
-    logger.info({ id }, '[StocksService] Suppression de matériel demandée');
-
     try {
       const existing = await prisma.asset.findUnique({
         where: { id },
       });
 
       if (!existing) {
-        logger.warn({ id }, '[StocksService] Suppression impossible: matériel non trouvé');
         return false;
       }
 
@@ -667,27 +558,15 @@ export class StocksService {
         where: { id },
       });
 
-      logger.info({ id }, '[StocksService] Matériel supprimé avec succès');
-
       return true;
     } catch (error: any) {
       if (error instanceof Prisma.PrismaClientValidationError) {
-        logger.warn(
-          { id, error },
-          '[StocksService] Identifiant invalide lors de la suppression du matériel',
-        );
-
         throw new HttpError(
           400,
           "L'identifiant fourni pour supprimer le matériel est invalide.",
           'ASSET_ID_VALIDATION_ERROR',
         );
       }
-
-      logger.error(
-        { error, id },
-        '[StocksService] Erreur inattendue lors de la suppression du matériel',
-      );
 
       throw error;
     }

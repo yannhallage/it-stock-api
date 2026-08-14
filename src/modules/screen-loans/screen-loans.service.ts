@@ -1,5 +1,4 @@
 import { prisma } from '../../prisma/client';
-import { logger } from '../../logger';
 import { AssetStatus, HistoryEventType, Prisma } from '@prisma/client';
 import { HttpError } from '../../errors/http-error';
 import { CreateScreenLoanDto } from './dto/create-screen-loan.dto';
@@ -13,15 +12,6 @@ const screenLoanInclude = {
 
 export class ScreenLoansService {
   async createLoan(data: CreateScreenLoanDto) {
-    logger.info(
-      {
-        assetId: data.assetId,
-        borrowerFirstName: data.borrowerFirstName,
-        borrowerLastName: data.borrowerLastName,
-      },
-      '[ScreenLoansService] Création emprunt matériel demandée',
-    );
-
     const asset = await prisma.asset.findUnique({ where: { id: data.assetId } });
     if (!asset) {
       return null;
@@ -110,8 +100,6 @@ export class ScreenLoansService {
   }
 
   async listLoans(filters: ScreenLoanFilterDto) {
-    logger.debug({ filters }, '[ScreenLoansService] Listing emprunts matériel');
-
     const where: Prisma.ScreenLoanWhereInput = {};
 
     if (filters.borrowerName) {
@@ -145,15 +133,12 @@ export class ScreenLoansService {
       );
     }
 
-    logger.debug({ id }, '[ScreenLoansService] Recuperation emprunt materiel par id');
-
     const loan = await prisma.screenLoan.findUnique({
       where: { id },
       include: screenLoanInclude,
     });
 
     if (!loan) {
-      logger.warn({ id }, '[ScreenLoansService] Emprunt materiel non trouve');
       return null;
     }
 
@@ -161,8 +146,6 @@ export class ScreenLoansService {
   }
 
   async returnLoan(id: number) {
-    logger.info({ id }, '[ScreenLoansService] Retour emprunt matériel demandé');
-
     const existing = await prisma.screenLoan.findUnique({
       where: { id },
       include: { asset: true },
