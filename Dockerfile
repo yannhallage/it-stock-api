@@ -55,13 +55,11 @@
     RUN apt-get update && apt-get install -y --no-install-recommends openssl=3.* \
         && rm -rf /var/lib/apt/lists/*
     
-    # Install deps + generate Prisma + build (regroupé pour Hadolint)
+    # Schema Prisma avant npm ci : postinstall lance prisma generate
     COPY package.json package-lock.json ./
-    RUN npm ci && \
-        npx prisma generate
-    
-    # Copy source
     COPY prisma ./prisma
+    RUN npm ci
+    
     COPY tsconfig.json ./
     COPY src ./src
     
@@ -77,8 +75,9 @@
     RUN apt-get update && apt-get install -y --no-install-recommends openssl=3.* \
         && rm -rf /var/lib/apt/lists/*
     
-    # Install only prod deps
+    # Schema Prisma avant npm ci : postinstall lance prisma generate
     COPY package.json package-lock.json ./
+    COPY prisma ./prisma
     RUN npm ci --omit=dev && npm cache clean --force
     
     # Copy only necessary Prisma runtime
@@ -87,7 +86,6 @@
     
     # Copy app
     COPY --from=builder /app/dist ./dist
-    COPY prisma ./prisma
 
     # Copy PDF assets (logo) not emitted by the TypeScript build
     COPY --from=builder /app/src/modules/pdf/image.png ./dist/modules/pdf/image.png
