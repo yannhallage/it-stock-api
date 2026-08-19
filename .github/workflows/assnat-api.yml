@@ -1,10 +1,9 @@
 # CI : vérifications, build de l'image Docker de l'API et publication sur GHCR.
 name: assnat-api
 
-# Déclenché uniquement sur la branche de livraison.
+# Désactivé : le pipeline oraclouds / GHCR est géré par CircleCI (.circleci/config.yml).
 on:
-  push:
-    branches: [oraclouds]
+  workflow_dispatch:
 
 # Lecture du dépôt + écriture des packages (nécessaire pour pousser sur GHCR).
 permissions:
