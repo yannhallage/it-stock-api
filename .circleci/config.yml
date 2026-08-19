@@ -1,7 +1,7 @@
 # CircleCI : vérifications, build Docker de l'API et publication sur Harbor.
 #
 # Variables à définir dans CircleCI (Project Settings → Environment Variables) :
-#   HARBOR_REGISTRY   — hôte Harbor, sans schéma (ex. harbor.example.com)
+#   HARBOR_REGISTRY   — hôte Harbor, sans https:// (ex. harbor.example.com)
 #   HARBOR_PROJECT    — projet Harbor (ex. library)
 #   HARBOR_USERNAME   — utilisateur ou robot Harbor
 #   HARBOR_PASSWORD   — mot de passe ou token robot Harbor
@@ -71,6 +71,22 @@ jobs:
       # - run:
       #     name: Login to Docker Hub
       #     command: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - run:
+          name: Normalize Harbor settings
+          command: |
+            REGISTRY="$(printf '%s' "${HARBOR_REGISTRY}" | tr -d '\r' | sed -E 's#^https?://##; s#/+$##')"
+            PROJECT="$(printf '%s' "${HARBOR_PROJECT}" | tr -d '\r' | sed -E 's#^/+##; s#/+$##')"
+            REGISTRY="$(echo "${REGISTRY}" | tr '[:upper:]' '[:lower:]')"
+            PROJECT="$(echo "${PROJECT}" | tr '[:upper:]' '[:lower:]')"
+            if [ -z "${REGISTRY}" ] || [ -z "${PROJECT}" ]; then
+              echo "HARBOR_REGISTRY et HARBOR_PROJECT doivent être définis."
+              echo "HARBOR_REGISTRY = hôte seul, sans https:// (ex. harbor.example.com)"
+              echo "HARBOR_PROJECT  = nom du projet Harbor (ex. library)"
+              exit 1
+            fi
+            printf 'export HARBOR_REGISTRY=%q\n' "${REGISTRY}" >> "$BASH_ENV"
+            printf 'export HARBOR_PROJECT=%q\n' "${PROJECT}" >> "$BASH_ENV"
 
       - run:
           name: Login to Harbor
