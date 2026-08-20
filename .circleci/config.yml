@@ -149,7 +149,10 @@ jobs:
       - run:
           name: Check deploy settings
           command: |
-            if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_PATH}" ]; then
+            HOST="$(printf '%s' "${DEPLOY_HOST}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+            USER="$(printf '%s' "${DEPLOY_USER}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+            PATH_DIR="$(printf '%s' "${DEPLOY_PATH}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+            if [ -z "${HOST}" ] || [ -z "${USER}" ] || [ -z "${PATH_DIR}" ]; then
               echo "DEPLOY_HOST, DEPLOY_USER et DEPLOY_PATH doivent être définis."
               exit 1
             fi
@@ -157,6 +160,10 @@ jobs:
               echo "TAILSCALE_AUTHKEY doit être défini."
               exit 1
             fi
+            printf 'export DEPLOY_HOST=%q\n' "${HOST}" >> "$BASH_ENV"
+            printf 'export DEPLOY_USER=%q\n' "${USER}" >> "$BASH_ENV"
+            printf 'export DEPLOY_PATH=%q\n' "${PATH_DIR}" >> "$BASH_ENV"
+            echo "DEPLOY_HOST=${HOST}"
 
       - run:
           name: Install Tailscale
@@ -168,8 +175,18 @@ jobs:
             sudo tailscale up \
               --authkey="${TAILSCALE_AUTHKEY}" \
               --hostname="circleci-deploy-${CIRCLE_BUILD_NUM}" \
-              --accept-routes
-            sudo tailscale status
+              --accept-routes \
+              --accept-dns
+            for i in $(seq 1 30); do
+              if sudo tailscale status >/dev/null 2>&1; then
+                sudo tailscale status
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Tailscale n'est pas prêt."
+            sudo tailscale status || true
+            exit 1
 
       - run:
           name: Normalize Harbor settings
@@ -190,7 +207,37 @@ jobs:
           command: |
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
-            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+            echo "Attente de ${DEPLOY_HOST} via Tailscale..."
+            REACHABLE=0
+            for i in $(seq 1 30); do
+              if sudo tailscale ping --c 1 --timeout=5s --until-direct=false "${DEPLOY_HOST}"; then
+                REACHABLE=1
+                break
+              fi
+              echo "ping ${i}/30 échoué, nouvelle tentative..."
+              sleep 2
+            done
+            if [ "${REACHABLE}" -ne 1 ]; then
+              echo "Impossible de joindre ${DEPLOY_HOST} via Tailscale."
+              echo "Vérifie DEPLOY_HOST (IP 100.x ou nom MagicDNS) et les ACL Tailscale."
+              sudo tailscale status || true
+              exit 1
+            fi
+            KEYS=""
+            for i in $(seq 1 10); do
+              KEYS="$(ssh-keyscan -T 10 -t rsa,ecdsa,ed25519 "${DEPLOY_HOST}" 2>/tmp/ssh-keyscan.err || true)"
+              if [ -n "${KEYS}" ]; then
+                printf '%s\n' "${KEYS}" >> ~/.ssh/known_hosts
+                echo "Clé SSH du serveur enregistrée."
+                exit 0
+              fi
+              echo "ssh-keyscan ${i}/10 sans clé :"
+              cat /tmp/ssh-keyscan.err || true
+              sleep 2
+            done
+            echo "ssh-keyscan n'a pas obtenu la clé de ${DEPLOY_HOST}:22"
+            sudo tailscale status || true
+            exit 1
 
       - run:
           name: Pull and recreate API
