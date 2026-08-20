@@ -60,6 +60,7 @@ app.use(
       const allowedOrigins = [
         env.corsOrigin,
         'http://localhost:5173',
+        'https://assets.oraclouds.com',
         'http://127.0.0.1:5173',
         'https://assnat-stock.vercel.app',
         'https://assnat-control.vercel.app',
