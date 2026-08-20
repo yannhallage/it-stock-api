@@ -152,6 +152,12 @@ jobs:
             curl -fsSL https://tailscale.com/install.sh | sh
 
       - run:
+          name: Start Tailscale
+          command: |
+            sudo tailscaled --state=/tmp/tailscaled.state > /tmp/tailscaled.log 2>&1 &
+            sleep 3
+            sudo tailscale status --show-all > /tmp/tailscale-status.log 2>&1
+      - run:
           name: Connect to Tailscale
           command: |
             sudo tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=circleci-deploy
