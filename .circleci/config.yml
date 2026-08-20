@@ -145,6 +145,17 @@ jobs:
     steps:
       - add_ssh_keys
 
+      # Connect to Tailscale
+      - run:
+          name: Install Tailscale
+          command: |
+            curl -fsSL https://tailscale.com/install.sh | sh
+
+      - run:
+          name: Connect to Tailscale
+          command: |
+            sudo tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=circleci-deploy
+
       - run:
           name: Normalize Harbor settings
           command: |
