@@ -1,0 +1,58 @@
+# API + Postgres
+# Démarrage : docker compose up --build
+# API : http://localhost:3000  |  Docs : http://localhost:3000/docs
+#
+# Image Harbor (optionnel) :
+#   API_IMAGE=<registry>/<projet>/assets-managment:latest
+#   docker compose pull && docker compose up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: itstock
+      POSTGRES_PASSWORD: itstock
+      POSTGRES_DB: it_stock_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itstock -d it_stock_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ${API_IMAGE:-assets-managment:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://itstock:itstock@db:5432/it_stock_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-local}
+      PORT: "3000"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+volumes:
+  postgres_data:
