@@ -5,9 +5,10 @@
 #   HARBOR_PROJECT    — projet Harbor (ex. library)
 #   HARBOR_USERNAME   — utilisateur ou robot Harbor
 #   HARBOR_PASSWORD   — mot de passe ou token robot Harbor
-#   DEPLOY_HOST       — IP ou DNS du serveur (ex. 203.0.113.10)
-#   DEPLOY_USER       — utilisateur SSH (ex. deploy)
-#   DEPLOY_PATH       — dossier du docker-compose.yml (ex. /opt/it-stock-api)
+#   DEPLOY_HOST        — IP Tailscale ou DNS du serveur
+#   DEPLOY_USER        — utilisateur SSH (ex. deploy)
+#   DEPLOY_PATH        — dossier du docker-compose.yml (ex. /opt/it-stock-api)
+#   TAILSCALE_AUTHKEY  — clé reusable/ephemeral (https://login.tailscale.com/admin/settings/keys)
 #   # DOCKER_USERNAME — identifiant Docker Hub (désactivé pour le moment)
 #   # DOCKER_PASSWORD — mot de passe ou Access Token Docker Hub (désactivé pour le moment)
 #   # GHCR_USERNAME   — compte GitHub qui pousse (désactivé pour le moment)
@@ -138,31 +139,37 @@ jobs:
             /tmp/trivy image --exit-code 0 --format table --vuln-type os,library "${HARBOR_IMAGE}:latest"
 
   deploy:
-    # docker:
-    #   - image: cimg/base:current
     machine:
-    image: ubuntu-2404:current
+      image: ubuntu-2404:current
     environment:
       IMAGE_REPO: assets-managment
     steps:
       - add_ssh_keys
 
-      # Connect to Tailscale
       - run:
-          name: Install Tailscale
+          name: Check deploy settings
           command: |
-            curl -fsSL https://tailscale.com/install.sh | sh
+            if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_PATH}" ]; then
+              echo "DEPLOY_HOST, DEPLOY_USER et DEPLOY_PATH doivent être définis."
+              exit 1
+            fi
+            if [ -z "${TAILSCALE_AUTHKEY}" ]; then
+              echo "TAILSCALE_AUTHKEY doit être défini."
+              exit 1
+            fi
 
       - run:
-          name: Start Tailscale
-          command: |
-            sudo tailscaled --state=/tmp/tailscaled.state > /tmp/tailscaled.log 2>&1 &
-            sleep 3
-            sudo tailscale status --show-all > /tmp/tailscale-status.log 2>&1
+          name: Install Tailscale
+          command: curl -fsSL https://tailscale.com/install.sh | sh
+
       - run:
           name: Connect to Tailscale
           command: |
-            sudo tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=circleci-deploy
+            sudo tailscale up \
+              --authkey="${TAILSCALE_AUTHKEY}" \
+              --hostname="circleci-deploy-${CIRCLE_BUILD_NUM}" \
+              --accept-routes
+            sudo tailscale status
 
       - run:
           name: Normalize Harbor settings
@@ -179,14 +186,6 @@ jobs:
             printf 'export HARBOR_PROJECT=%q\n' "${PROJECT}" >> "$BASH_ENV"
 
       - run:
-          name: Check deploy settings
-          command: |
-            if [ -z "${DEPLOY_HOST}" ] || [ -z "${DEPLOY_USER}" ] || [ -z "${DEPLOY_PATH}" ]; then
-              echo "DEPLOY_HOST, DEPLOY_USER et DEPLOY_PATH doivent être définis."
-              exit 1
-            fi
-
-      - run:
           name: Trust server host key
           command: |
             mkdir -p ~/.ssh
@@ -201,6 +200,11 @@ jobs:
             echo "Deploy ${IMAGE} on ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"
             ssh -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
               "cd '${DEPLOY_PATH}' && API_IMAGE='${IMAGE}' docker compose pull api && API_IMAGE='${IMAGE}' docker compose up -d --no-deps api"
+
+      - run:
+          name: Disconnect Tailscale
+          when: always
+          command: sudo tailscale logout || true
 
 workflows:
   oraclouds:
