@@ -138,8 +138,10 @@ jobs:
             /tmp/trivy image --exit-code 0 --format table --vuln-type os,library "${HARBOR_IMAGE}:latest"
 
   deploy:
-    docker:
-      - image: cimg/base:current
+    # docker:
+    #   - image: cimg/base:current
+    machine:
+    image: ubuntu-2404:current
     environment:
       IMAGE_REPO: assets-managment
     steps:
